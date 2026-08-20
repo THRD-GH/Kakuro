@@ -12,6 +12,7 @@ import {
   loadHistory,
   loadSaveFor,
   loadSettings,
+  saveFitsPuzzle,
   retireGeneratedPuzzles,
   unplayedNumbers,
 } from './game/storage.ts';
@@ -20,7 +21,7 @@ import type { AppContext } from './ui/app-context.ts';
 import { clear, el } from './ui/dom.ts';
 import { openHelp } from './ui/help.ts';
 import { buildMenu } from './ui/menu.ts';
-import { closeTopOverlay, onOverlayClose, onOverlayOpen, overlaysOpen, toast } from './ui/overlay.ts';
+import { closeAllOverlays, closeTopOverlay, onOverlayClose, onOverlayOpen, overlaysOpen, toast } from './ui/overlay.ts';
 import { PlayScreen } from './ui/play.ts';
 import { openSettings } from './ui/settings.ts';
 
@@ -87,7 +88,10 @@ class App implements AppContext {
     });
 
     this.goMenu();
-    if (linked) this.playPuzzle(linked);
+    if (linked?.ok) this.playPuzzle(linked.id);
+    else if (linked && !linked.ok) {
+      toast('That New puzzle was made by an older generator and is no longer the same grid.');
+    }
 
     if (forgotten > 0) {
       toast(
@@ -100,6 +104,7 @@ class App implements AppContext {
   // ------------------------------------------------------------------ screens
 
   goMenu(): void {
+    closeAllOverlays();
     this.play?.destroy();
     this.play = null;
     this.onMenu = true;
@@ -121,6 +126,7 @@ class App implements AppContext {
   }
 
   playPuzzle(id: PuzzleId): void {
+    closeAllOverlays();
     this.onMenu = false;
     clear(this.root);
     this.root.append(
@@ -136,10 +142,15 @@ class App implements AppContext {
     void getPuzzle(id)
       .then((puzzle) => {
         this.play?.destroy();
-        const screen = new PlayScreen(this, id, puzzle, loadSaveFor(id));
+        const save = loadSaveFor(id);
+        if (save && !saveFitsPuzzle(save, puzzle)) {
+          toast('That save was for a different grid, so this one starts empty.');
+        }
+        const screen = new PlayScreen(this, id, puzzle, save);
         this.play = screen;
         clear(this.root);
         this.root.append(screen.node);
+        screen.attached();
         this.syncGuard();
         this.applyWakeLock();
 

@@ -6,11 +6,15 @@ import { cachePuzzle, cachedPuzzle } from './storage.ts';
 /**
  * Generating a New puzzle is a search, so it happens on a worker and the board
  * shows a spinner rather than the page locking up. Results are cached, which
- * makes going back to a puzzle number instant.
+ * makes going back to a puzzle number instant. Prefetch and a tap on the same
+ * number share one in-flight search rather than running two.
  */
 let worker: Worker | null = null;
 let nextToken = 1;
 const pending = new Map<number, { resolve: (p: Puzzle) => void; reject: (e: Error) => void }>();
+const inflight = new Map<string, Promise<Puzzle>>();
+
+const puzzleKey = (id: PuzzleId): string => `${id.source}:${id.level}:${id.number}`;
 
 function ensureWorker(): Worker | null {
   if (worker) return worker;
@@ -44,42 +48,43 @@ function ensureWorker(): Worker | null {
   return worker;
 }
 
+function requestGenerated(id: PuzzleId): Promise<Puzzle> {
+  const w = ensureWorker();
+  if (!w) return Promise.resolve(generatePuzzle(id.level, id.number));
+  const token = nextToken++;
+  return new Promise<Puzzle>((resolve, reject) => {
+    pending.set(token, { resolve, reject });
+    w.postMessage({ token, level: id.level, number: id.number });
+  }).catch(() => generatePuzzle(id.level, id.number));
+}
+
 export async function getPuzzle(id: PuzzleId): Promise<Puzzle> {
   const cached = cachedPuzzle(id);
   if (cached) return cached;
 
   // Classic puzzles are a lookup, not a search — no worker needed.
   if (id.source === 'classic') {
-    const puzzle = await classicPuzzle(id.level, id.number);
+    return classicPuzzle(id.level, id.number);
+  }
+
+  const key = puzzleKey(id);
+  const existing = inflight.get(key);
+  if (existing) return existing;
+
+  const search = requestGenerated(id).then((puzzle) => {
     cachePuzzle(id, puzzle);
     return puzzle;
+  });
+  inflight.set(key, search);
+  try {
+    return await search;
+  } finally {
+    inflight.delete(key);
   }
-
-  const w = ensureWorker();
-  let puzzle: Puzzle;
-  if (w) {
-    const token = nextToken++;
-    puzzle = await new Promise<Puzzle>((resolve, reject) => {
-      pending.set(token, { resolve, reject });
-      w.postMessage({ token, level: id.level, number: id.number });
-    }).catch(() => generatePuzzle(id.level, id.number));
-  } else {
-    puzzle = generatePuzzle(id.level, id.number);
-  }
-
-  cachePuzzle(id, puzzle);
-  return puzzle;
 }
 
 /** Warm the cache for a puzzle the player is likely to open next. */
 export function prefetch(id: PuzzleId): void {
-  if (cachedPuzzle(id) || id.source === 'classic') return;
-  const w = ensureWorker();
-  if (!w) return;
-  const token = nextToken++;
-  pending.set(token, {
-    resolve: (puzzle) => cachePuzzle(id, puzzle),
-    reject: () => undefined,
-  });
-  w.postMessage({ token, level: id.level, number: id.number });
+  if (id.source === 'classic' || cachedPuzzle(id)) return;
+  void getPuzzle(id).catch(() => undefined);
 }

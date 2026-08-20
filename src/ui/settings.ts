@@ -30,16 +30,16 @@ const TOGGLES: { heading: string; items: Toggle[] }[] = [
     heading: 'Writing',
     items: [
       { key: 'autoRemoveMarks', label: 'Tidy pencil marks', note: 'Writing a digit strikes it from the marks in both its runs' },
-      { key: 'instantCheck', label: 'Flag wrong digits at once', note: 'Without waiting for Check — easier, and it costs the puzzle its bite' },
+      { key: 'instantCheck', label: 'Flag broken runs at once', note: 'A repeat or an overshoot, not the hidden answer — Check still marks digits that are actually wrong' },
       { key: 'keepAwake', label: 'Keep the screen on', note: 'While a puzzle is open' },
     ],
   },
   {
     heading: 'Guarded buttons',
     items: [
-      { key: 'checkNeedsHold', label: 'Hold to check', note: 'Check is counted against the puzzle' },
-      { key: 'hintNeedsHold', label: 'Hold for a hint', note: 'So is a hint' },
-      { key: 'clearNeedsHold', label: 'Hold to clear a cell', note: 'Guards against a mis-tap wiping a cell' },
+      { key: 'checkNeedsHold', label: 'Hold to check', note: 'Check is counted against the puzzle. Keyboard: Shift+C' },
+      { key: 'hintNeedsHold', label: 'Hold for a hint', note: 'So is a hint. Keyboard: Shift+H' },
+      { key: 'clearNeedsHold', label: 'Hold to clear a cell', note: 'Guards against a mis-tap wiping a cell. Keyboard: Shift+Backspace' },
     ],
   },
 ];

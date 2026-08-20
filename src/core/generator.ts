@@ -244,7 +244,8 @@ export function generatePuzzle(level: Level, number: number): Puzzle {
         rating: found.rating,
       };
     }
-    // A real puzzle at the wrong level still beats no puzzle at all.
+    // A real puzzle at the wrong level still beats no puzzle at all — but the
+    // stars must match the grid, not the number that was asked for.
     const wanted = target(level);
     if (!fallback || Math.abs(found.rating - wanted) < Math.abs(fallback.rating - wanted)) {
       fallback = found;
@@ -254,7 +255,7 @@ export function generatePuzzle(level: Level, number: number): Puzzle {
   if (!fallback) throw new Error(`could not generate a level ${level} puzzle`);
   return {
     ...build(plan.size, fallback.values),
-    difficulty: level,
+    difficulty: classify(fallback.rating),
     seed: number,
     rating: fallback.rating,
   };

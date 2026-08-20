@@ -10,7 +10,7 @@ import type { AppContext } from './app-context.ts';
 import { Board } from './board.ts';
 import { CombosPanel } from './combos.ts';
 import { clear, el, formatTime, onHold } from './dom.ts';
-import { confirmPanel, openOverlay, toast } from './overlay.ts';
+import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
 
 export class PlayScreen {
   readonly node: HTMLElement;
@@ -21,6 +21,7 @@ export class PlayScreen {
   private combos: CombosPanel;
 
   private clock: HTMLElement;
+  private claim!: HTMLElement;
   private noteButton: HTMLButtonElement;
   private undoButton: HTMLButtonElement;
   private redoButton: HTMLButtonElement;
@@ -74,10 +75,22 @@ export class PlayScreen {
     );
 
     this.applyCombosSetting();
-    this.select(this.firstEmpty());
-    this.game.start();
     this.tick();
     this.ticker = window.setInterval(() => this.tick(), 500);
+    if (this.game.complete) {
+      this.win();
+      return;
+    }
+    this.select(this.firstEmpty());
+    this.game.start();
+  }
+
+  /** Called once the play tree is in the document, so the selected cell can take focus. */
+  attached(): void {
+    if (this.finished) return;
+    if (this.board.selection >= 0) this.board.select(this.board.selection);
+    this.undoButton.disabled = !this.game.canUndo;
+    this.redoButton.disabled = !this.game.canRedo;
   }
 
   // -------------------------------------------------------------- furniture
@@ -89,16 +102,17 @@ export class PlayScreen {
     const menu = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Puzzle menu' }, '⋯');
     menu.addEventListener('click', () => this.openGameMenu());
 
+    const stars = `${'★'.repeat(puzzle.difficulty)}${'☆'.repeat(6 - puzzle.difficulty)}`;
+    this.claim = el('span', {
+      class: 'play-claim',
+      text: `${stars} · ${puzzle.size}×${puzzle.size}`,
+    });
+
     return el(
       'header',
       { class: 'play-bar' },
       back,
-      el(
-        'div',
-        { class: 'play-id' },
-        el('b', { text: displayPuzzleId(id) }),
-        el('span', { text: `${'★'.repeat(puzzle.difficulty)}${'☆'.repeat(6 - puzzle.difficulty)}` }),
-      ),
+      el('div', { class: 'play-id' }, el('b', { text: displayPuzzleId(id) }), this.claim),
       this.clock,
       menu,
     );
@@ -263,6 +277,7 @@ export class PlayScreen {
       case 'Backspace':
       case 'Delete':
       case '0':
+        if (this.app.settings.clearNeedsHold && !e.shiftKey) break;
         this.eraseCell();
         break;
       case 'n':
@@ -279,10 +294,12 @@ export class PlayScreen {
         break;
       case 'h':
       case 'H':
+        if (this.app.settings.hintNeedsHold && !e.shiftKey) break;
         this.hint();
         break;
       case 'c':
       case 'C':
+        if (this.app.settings.checkNeedsHold && !e.shiftKey) break;
         this.check();
         break;
       default:
@@ -416,18 +433,23 @@ export class PlayScreen {
     this.saveTimer = null;
 
     const ground = new Solver(this.game.puzzle).grind();
-    const technique = ground.hardest ? TECHNIQUE_NAMES[ground.hardest] : 'arithmetic alone';
+    const technique = ground.hardest ? TECHNIQUE_NAMES[ground.hardest] : 'Arithmetic alone';
+    this.claim.textContent = `${technique} · ${this.game.puzzle.size}×${this.game.puzzle.size}`;
+    this.claim.setAttribute('aria-live', 'polite');
+
+    const filed = this.game.id.level;
+    const played = this.game.puzzle.difficulty;
+    const summary =
+      filed === played
+        ? `Level ${filed}. The hardest thing it asked for was ${technique.toLowerCase()}.`
+        : `Opened as level ${filed}, this grid played as level ${played}. The hardest thing it asked for was ${technique.toLowerCase()}.`;
 
     openOverlay(
       el(
         'div',
         { class: 'won' },
         el('p', { class: 'won-time', text: formatTime(ms) }),
-        el('p', {
-          text:
-            `Level ${this.game.puzzle.difficulty}. The hardest thing it asked for was ` +
-            `${technique.toLowerCase()}.`,
-        }),
+        el('p', { text: summary }),
         this.game.hints > 0 || this.game.checks > 0
           ? el('p', {
               class: 'won-aids',
@@ -438,12 +460,13 @@ export class PlayScreen {
       {
         title: 'Solved',
         dismissable: false,
+        onDismiss: () => this.app.goMenu(),
         actions: [
           { label: 'Menu', onClick: () => this.app.goMenu() },
           {
             label: 'Next puzzle',
             primary: true,
-            onClick: () => this.app.playRandom(this.game.puzzle.difficulty, this.game.id.source),
+            onClick: () => this.app.playRandom(this.game.id.level, this.game.id.source),
           },
         ],
       },
@@ -461,7 +484,7 @@ export class PlayScreen {
         el('span', { text: note }),
       );
       button.addEventListener('click', () => {
-        shade.remove();
+        closeTopOverlay();
         onClick();
       });
       return button;
@@ -480,13 +503,17 @@ export class PlayScreen {
       item('How to play', 'The rules and what the buttons do', () => this.app.openHelp()),
     );
 
-    const shade = openOverlay(body, { title: 'This puzzle', actions: [{ label: 'Close' }] });
+    openOverlay(body, { title: 'This puzzle', actions: [{ label: 'Close' }] });
   }
 
   private fillMarks(): void {
     const solver = new Solver(this.game.puzzle, this.game.values);
     solver.propagate(false);
-    this.game.fillMarks((cell) => (solver.masks[cell] === 0 ? ALL : solver.masks[cell]));
+    const changed = this.game.fillMarks((cell) => (solver.masks[cell] === 0 ? ALL : solver.masks[cell]));
+    if (!changed) {
+      toast('Every empty cell already has its marks.');
+      return;
+    }
     this.afterEdit();
     toast('Pencil marks filled in.');
   }

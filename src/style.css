@@ -367,9 +367,10 @@ p {
   letter-spacing: 0.02em;
 }
 
-.play-id span {
+.play-id span,
+.play-claim {
   font-size: 0.72rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
   color: var(--accent);
 }
 

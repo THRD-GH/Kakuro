@@ -29,6 +29,8 @@ export class Board {
       class: 'board',
       role: 'grid',
       'aria-label': 'Kakuro grid',
+      'aria-rowcount': String(game.puzzle.size),
+      'aria-colcount': String(game.puzzle.size),
       style: `--n:${game.puzzle.size}`,
     });
 
@@ -42,6 +44,8 @@ export class Board {
         const node = el('i', {
           class: `cell clue${across || down ? ' clued' : ''}`,
           role: 'gridcell',
+          'aria-rowindex': String(row),
+          'aria-colindex': String(column),
           'aria-label': clueLabel(across?.sum, down?.sum, row, column),
         });
         const acrossNode = across ? el('b', { class: 'across', text: String(across.sum) }) : null;
@@ -66,6 +70,9 @@ export class Board {
           class: 'cell answer',
           role: 'gridcell',
           tabindex: '-1',
+          'aria-selected': 'false',
+          'aria-rowindex': String(row),
+          'aria-colindex': String(column),
           'aria-label': `row ${row}, column ${column}, empty`,
         },
         digit,
@@ -84,6 +91,7 @@ export class Board {
   select(cell: number): void {
     this.selected = cell;
     this.paint();
+    this.cells[cell]?.focus({ preventScroll: true });
   }
 
   get selection(): number {
@@ -117,6 +125,7 @@ export class Board {
         if (run) for (const cell of run.cells) peers.add(cell);
       }
     }
+    const conflicts = this.settings.instantCheck ? new Set(game.conflictCells()) : new Set<number>();
 
     for (let cell = 0; cell < this.cells.length; cell++) {
       const node = this.cells[cell];
@@ -137,12 +146,13 @@ export class Board {
         }
       }
 
-      const wrong =
-        game.flagged.has(cell) ||
-        (this.settings.instantCheck && value !== 0 && value !== game.puzzle.solution[cell]);
+      const selected = cell === this.selected;
+      const wrong = game.flagged.has(cell) || (this.settings.instantCheck && conflicts.has(cell));
 
-      node.classList.toggle('sel', cell === this.selected);
-      node.classList.toggle('peer', peers.has(cell) && cell !== this.selected);
+      node.tabIndex = selected ? 0 : -1;
+      node.setAttribute('aria-selected', String(selected));
+      node.classList.toggle('sel', selected);
+      node.classList.toggle('peer', peers.has(cell) && !selected);
       node.classList.toggle(
         'same',
         this.settings.highlightSameDigit &&
@@ -154,7 +164,7 @@ export class Board {
       node.classList.toggle('spot', this.spotlit.has(cell));
       node.setAttribute(
         'aria-label',
-        cellLabel(cell, game.puzzle.size, value, marks),
+        cellLabel(cell, game.puzzle.size, value, marks, wrong),
       );
     }
 
@@ -181,10 +191,11 @@ function clueLabel(across: number | undefined, down: number | undefined, row: nu
     : `row ${row}, column ${column}, clue ${parts.join(' and ')}`;
 }
 
-function cellLabel(cell: number, size: number, value: number, marks: number): string {
+function cellLabel(cell: number, size: number, value: number, marks: number, wrong: boolean): string {
   const row = Math.floor(cell / size) + 1;
   const column = (cell % size) + 1;
   const where = `row ${row}, column ${column}`;
+  if (value && wrong) return `${where}, ${value}, incorrect`;
   if (value) return `${where}, ${value}`;
   if (marks) return `${where}, pencilled ${digitsOf(marks).join(' ')}`;
   return `${where}, empty`;

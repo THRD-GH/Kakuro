@@ -28,15 +28,15 @@ export function openHelp(): void {
     section('Playing', [
       'Tap a cell to select it, then tap a digit to write it in. Tapping the same digit again rubs it out.',
       'Notes turns the keypad into pencil marks. Holding a digit does the other thing — a pencil mark while you are writing answers, an answer while you are pencilling.',
-      'Keyboard: arrows move, 1–9 write, Shift and a digit pencils, Backspace clears, N toggles notes, Z undoes, H hints, C checks.',
+      'Keyboard: arrows move, 1–9 write, Shift and a digit pencils, Backspace clears, N toggles notes, Z undoes, Y redoes. When Check, Hint or Clear is set to need a hold, the keyboard uses Shift with C, H or Backspace.',
     ]),
     section('The table', [
       'The strip under the board lists every combination that still fits the two clues through the cell you are on — with the digits already written in taken out of both the total and the alphabet.',
       'So a 23 across with a 6 already in it shows the ways to make 17 in the cells that are left. Table hides it if you would rather do it in your head.',
     ]),
     section('Check and hint', [
-      'Check marks the digits that are wrong. It is counted against the puzzle, so it is held rather than tapped by default.',
-      'Hint names the technique that cracks the position, says why it works and tints the cells it is talking about. It only writes the digit in if you ask it to.',
+      'Check marks digits that disagree with the unique answer. It is counted against the puzzle, so it is held rather than tapped by default. Instant check is different: it only flags a digit that already repeats in a run or overshoots a clue, and never consults the answer.',
+      'Hint names the technique that cracks the position, says why it works and tints the cells it is talking about. It only writes the digit in if you ask it to. Hint is a tap by default; hold can be turned on in Settings.',
       'A clue goes quiet when its run is full and adds up, and turns red when it is full and does not. That is arithmetic you can do yourself, so it gives nothing away.',
     ]),
   );

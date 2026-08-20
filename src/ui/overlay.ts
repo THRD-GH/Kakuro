@@ -6,7 +6,13 @@ import { clear, el } from './dom.ts';
  * gesture spends, and what Escape closes.
  */
 
-const stack: HTMLElement[] = [];
+interface Overlay {
+  shade: HTMLElement;
+  close: (reason: 'action' | 'dismiss') => void;
+  dismissable: boolean;
+}
+
+const stack: Overlay[] = [];
 const openHandlers: (() => void)[] = [];
 const closeHandlers: (() => void)[] = [];
 
@@ -28,28 +34,57 @@ export interface PanelOptions {
   actions?: { label: string; onClick?: () => void; keep?: boolean; primary?: boolean }[];
   /** A panel that only reports something can be dismissed by tapping outside. */
   dismissable?: boolean;
+  /** Fired when the panel is dismissed, not when an action button closes it. */
+  onDismiss?: () => void;
+}
+
+let dialogSerial = 0;
+
+function focusableIn(root: HTMLElement): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(
+    (node) => !node.hasAttribute('disabled') && node.tabIndex !== -1,
+  );
 }
 
 export function openOverlay(body: HTMLElement, options: PanelOptions): HTMLElement {
-  const panel = el('div', { class: 'panel', role: 'dialog', 'aria-modal': 'true' });
+  const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const titleId = `kk-dialog-title-${++dialogSerial}`;
+  const noteId = options.note ? `kk-dialog-note-${dialogSerial}` : undefined;
+
+  const panel = el('div', {
+    class: 'panel',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-labelledby': titleId,
+    ...(noteId ? { 'aria-describedby': noteId } : {}),
+  });
   const shade = el('div', { class: 'shade' }, panel);
 
   panel.append(
     el(
       'header',
       { class: 'panel-head' },
-      el('h2', { text: options.title }),
-      options.note ? el('p', { text: options.note }) : null,
+      el('h2', { id: titleId, text: options.title }),
+      options.note ? el('p', { id: noteId, text: options.note }) : null,
     ),
     el('div', { class: 'panel-body' }, body),
   );
 
-  const close = (): void => {
-    const at = stack.indexOf(shade);
-    if (at >= 0) stack.splice(at, 1);
+  const overlay: Overlay = {
+    shade,
+    dismissable: options.dismissable !== false,
+    close: () => undefined,
+  };
+  const close = (reason: 'action' | 'dismiss' = 'action'): void => {
+    const at = stack.indexOf(overlay);
+    if (at < 0) return;
+    stack.splice(at, 1);
     shade.remove();
     for (const fn of closeHandlers) fn();
+    if (reason === 'dismiss') options.onDismiss?.();
+    if (previous && document.body.contains(previous)) previous.focus({ preventScroll: true });
   };
+  overlay.close = close;
 
   const actions = options.actions ?? [{ label: 'Close' }];
   panel.append(
@@ -64,7 +99,7 @@ export function openOverlay(body: HTMLElement, options: PanelOptions): HTMLEleme
         });
         button.addEventListener('click', () => {
           action.onClick?.();
-          if (!action.keep) close();
+          if (!action.keep) close('action');
         });
         return button;
       }),
@@ -73,24 +108,51 @@ export function openOverlay(body: HTMLElement, options: PanelOptions): HTMLEleme
 
   if (options.dismissable !== false) {
     shade.addEventListener('click', (e) => {
-      if (e.target === shade) close();
+      if (e.target === shade) close('dismiss');
     });
   }
 
+  shade.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const focusable = focusableIn(panel);
+    if (focusable.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      last.focus();
+      e.preventDefault();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      first.focus();
+      e.preventDefault();
+    }
+  });
+
   document.body.append(shade);
-  stack.push(shade);
+  stack.push(overlay);
   for (const fn of openHandlers) fn();
-  panel.querySelector<HTMLElement>('button, [tabindex]')?.focus();
+  const first = focusableIn(panel)[0];
+  if (first) first.focus();
+  else {
+    panel.tabIndex = -1;
+    panel.focus();
+  }
   return shade;
 }
 
-/** Close whatever is on top. Returns false when nothing was open. */
+/** Close whatever is on top. Returns false when nothing was open or it cannot be dismissed. */
 export function closeTopOverlay(): boolean {
-  const top = stack.pop();
-  if (!top) return false;
-  top.remove();
-  for (const fn of closeHandlers) fn();
+  const top = stack[stack.length - 1];
+  if (!top || !top.dismissable) return false;
+  top.close('dismiss');
   return true;
+}
+
+/** Close every panel. Used when leaving the screen under them. */
+export function closeAllOverlays(): void {
+  while (stack.length > 0) stack[stack.length - 1].close('action');
 }
 
 let toastNode: HTMLElement | null = null;

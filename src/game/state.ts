@@ -1,7 +1,7 @@
 import { bit } from '../core/bits.ts';
 import { indexRuns } from '../core/types.ts';
 import type { Puzzle, PuzzleId, Run, RunIndex } from '../core/types.ts';
-import type { SavedGame } from './storage.ts';
+import { saveFitsPuzzle, type SavedGame } from './storage.ts';
 
 interface Snapshot {
   values: number[];
@@ -16,7 +16,7 @@ interface Snapshot {
  * written in a cell, or 0; `marks` holds the pencilled candidates as a nine-bit
  * mask. A cell can hold both — pencil marks stay put underneath an answer, so
  * that taking the answer out again does not throw away the thinking that led
- * to it.
+ * to it. Clear is what empties both.
  */
 export class Game {
   readonly id: PuzzleId;
@@ -41,11 +41,17 @@ export class Game {
     this.puzzle = puzzle;
     this.index = indexRuns(puzzle);
     const cells = puzzle.size * puzzle.size;
-    this.values = save?.values?.slice() ?? new Array<number>(cells).fill(0);
-    this.marks = save?.marks?.slice() ?? new Array<number>(cells).fill(0);
-    this.elapsedMs = save?.elapsedMs ?? 0;
-    this.hints = save?.hints ?? 0;
-    this.checks = save?.checks ?? 0;
+    const usable = saveFitsPuzzle(save ?? null, puzzle);
+    this.values = usable ? usable.values.slice() : new Array<number>(cells).fill(0);
+    this.marks = usable ? usable.marks.slice() : new Array<number>(cells).fill(0);
+    this.elapsedMs = usable ? usable.elapsedMs : 0;
+    this.hints = usable ? usable.hints : 0;
+    this.checks = usable ? usable.checks : 0;
+    if (usable?.flagged) {
+      for (const cell of usable.flagged) {
+        if (this.values[cell] && this.values[cell] !== puzzle.solution[cell]) this.flagged.add(cell);
+      }
+    }
   }
 
   // ----------------------------------------------------------------- the grid
@@ -106,8 +112,8 @@ export class Game {
     if (this.isClue(cell) || this.values[cell] === digit) return;
     this.remember();
     this.values[cell] = digit;
-    this.marks[cell] = 0;
     this.flagged.delete(cell);
+    if (digit) this.marks[cell] &= ~bit(digit);
 
     if (digit && autoRemoveMarks) {
       for (const run of [this.acrossRun(cell), this.downRun(cell)]) {
@@ -142,12 +148,17 @@ export class Game {
   }
 
   /** Pencil in every candidate the rules have not already ruled out. */
-  fillMarks(candidates: (cell: number) => number): void {
-    this.remember();
+  fillMarks(candidates: (cell: number) => number): boolean {
+    let changed = false;
     for (let cell = 0; cell < this.values.length; cell++) {
       if (this.isClue(cell) || this.values[cell]) continue;
-      this.marks[cell] = candidates(cell);
+      const next = candidates(cell);
+      if (this.marks[cell] === next) continue;
+      if (!changed) this.remember();
+      changed = true;
+      this.marks[cell] = next;
     }
+    return changed;
   }
 
   restart(): void {
@@ -187,6 +198,7 @@ export class Game {
 
   // ------------------------------------------------------------------ status
 
+  /** Digits that disagree with the unique answer — what Check marks. */
   wrongCells(): number[] {
     const out: number[] = [];
     for (let cell = 0; cell < this.values.length; cell++) {
@@ -194,6 +206,20 @@ export class Game {
       if (digit && digit !== this.puzzle.solution[cell]) out.push(cell);
     }
     return out;
+  }
+
+  /**
+   * Digits that already break a run's rules: a repeat, an overshoot, or a full
+   * run that does not add up. Instant check uses this rather than the answer.
+   */
+  conflictCells(): number[] {
+    const out = new Set<number>();
+    for (const run of this.puzzle.runs) {
+      const { full, left, repeated } = this.progress(run);
+      if (!repeated && left >= 0 && !(full && left !== 0)) continue;
+      for (const cell of run.cells) if (this.values[cell]) out.add(cell);
+    }
+    return [...out];
   }
 
   emptyCells(): number[] {
@@ -242,6 +268,7 @@ export class Game {
       elapsedMs: this.time,
       hints: this.hints,
       checks: this.checks,
+      flagged: [...this.flagged],
     };
   }
 }

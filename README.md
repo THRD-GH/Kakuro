@@ -4,7 +4,8 @@ Cross sums, with a combination table, technique-named hints and a six-star
 level ladder. Part of the [DanDoku](https://dandoku.com) collection, and served
 from `dandoku.com/kakuro/`.
 
-Vite + TypeScript, no runtime dependencies. `npm run dev`, `npm run build`.
+Vite + TypeScript, no runtime dependencies. `npm run dev`, `npm run build`,
+`npm test`. MIT licensed so the rest of the collection can share the core.
 
 ## Installing
 
@@ -30,12 +31,14 @@ may repeat elsewhere, which is what makes this not sudoku.
 | Gesture | Effect |
 | --- | --- |
 | Tap cell | Select it |
-| Tap keypad digit | Write it in — or pencil it, in Notes |
+| Tap keypad digit | Write it in — or pencil it, in Notes. Pencil marks stay under an answer until Clear. |
 | Long-click / double-click a digit | The other one: a pencil mark while writing answers, an answer while pencilling |
 | Long-click Clear | Empty the cell |
 
 Keyboard: arrows move, `1`–`9` write, `Shift`+digit pencils, `Backspace`
-clears, `N` toggles notes, `Z` undoes, `Y` redoes, `H` hints, `C` checks.
+clears, `N` toggles notes, `Z` undoes, `Y` redoes. When Check, Hint or Clear
+is set to need a hold, the matching keys are `Shift+C`, `Shift+H` and
+`Shift+Backspace`.
 
 **The table** under the board lists every combination that still fits the two
 clues through the selected cell, with the digits already written in taken out
@@ -46,8 +49,11 @@ ways to make 17 in what is left. Table folds it away.
 and tints the cells it is talking about; it only writes the digit in if asked.
 Pressing it again walks another step down the same line of reasoning rather
 than repeating itself, which matters because most kakuro deductions rule digits
-*out* rather than write one in. **Check** marks wrong digits, and both are
-counted against the puzzle, so both are held rather than tapped by default.
+*out* rather than write one in. **Check** marks digits that disagree with the
+unique answer and is counted against the puzzle, so it is held rather than
+tapped by default. Hint is a tap unless you turn hold on in Settings.
+**Instant check** (off by default) flags a digit that already repeats in a run
+or overshoots a clue — it never looks up the answer.
 
 A clue goes green when its run is full and adds up, and red when it is full and
 does not. That is arithmetic the player can do unaided, so it gives nothing
@@ -68,8 +74,9 @@ technique ladder.**
 | 5 | Dealing combinations out across a run, cell by cell | 11×11 |
 | 6 | The same, on a grid that holds out most of the way | 11×11 |
 
-Solving a puzzle names the hardest technique it actually needed, so the level
-number can be checked against what the grid really asked of you.
+Solving a puzzle names the hardest technique it actually needed, on the win
+panel and in the header (`Unique combination · 8×8`), so the level number can
+be checked against what the grid really asked of you.
 
 **Every puzzle has exactly one answer and can be finished without guessing.**
 That is enforced rather than hoped for: the generator throws away any grid its
@@ -122,6 +129,7 @@ shapes yield which levels, and `node tools/prof.ts` says where the time goes.
 - `npm run build` — typecheck, build into `dist/`, regenerate `sw.js`
 - `npm run packs` — rebuild `public/packs/` (150 per level, about a minute)
 - `npm run verify` — check every shipped puzzle by exhaustive search
+- `npm test` — fast checks of the ladder, pack encoding, and shared links
 - `npm run icons` — redraw `public/icons/`
 
 ## Layout
@@ -134,4 +142,8 @@ shapes yield which levels, and `node tools/prof.ts` says where the time goes.
 
 Storage is namespaced `kk:v1:` and only ever prunes its own keys: the DanDoku
 games share one origin, and a game that tidied up `localStorage` generally
-would be deleting another game's saves.
+would be deleting another game's saves. Classic puzzles are read from the
+packs, not from that cache, so rebuilding the collection cannot leave an old
+grid in a save slot. A shared New link carries the generator version (`g=`);
+an older generator's number is refused rather than opening a different puzzle
+under the same id.

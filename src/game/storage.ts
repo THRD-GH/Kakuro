@@ -34,7 +34,7 @@ export interface Settings {
   highlightSameDigit: boolean;
   /** Writing a digit strikes it from the pencil marks in both its runs. */
   autoRemoveMarks: boolean;
-  /** Flag a wrong entry the moment it is made, rather than waiting for Check. */
+  /** Flag a repeat or overshoot the moment it is made, without consulting the answer. */
   instantCheck: boolean;
   /** Keep the combination table open beside the board as you move around it. */
   showCombos: boolean;
@@ -81,6 +81,8 @@ export interface SavedGame {
   elapsedMs: number;
   hints: number;
   checks: number;
+  /** Cells Check has marked, restored on resume. */
+  flagged?: number[];
   savedAt?: number;
 }
 
@@ -152,8 +154,8 @@ export function recordFinish(
       finished: true,
       bestMs: best ? ms : entry.bestMs,
       bestAt: best ? Date.now() : entry.bestAt,
-      hints: (entry.hints ?? 0) + hints,
-      checks: (entry.checks ?? 0) + checks,
+      hints: best ? hints : (entry.hints ?? hints),
+      checks: best ? checks : (entry.checks ?? checks),
     },
   };
   saveHistory(next);
@@ -188,8 +190,31 @@ export function loadSaveFor(id: PuzzleId): SavedGame | null {
   return loadSaves()[historyKey(id)] ?? null;
 }
 
+/**
+ * A save only resumes if it is the same grid, the same size, and the same
+ * length of marks and values. Anything else is a leftover from a rebuilt pack
+ * or a truncated write, and starting clean is better than painting holes.
+ */
+export function saveFitsPuzzle(save: SavedGame | null, puzzle: Puzzle): SavedGame | null {
+  if (!save) return null;
+  const cells = puzzle.size * puzzle.size;
+  if (save.puzzle.size !== puzzle.size) return null;
+  if (save.puzzle.solution.length !== cells) return null;
+  if (save.values.length !== cells || save.marks.length !== cells) return null;
+  if (save.puzzle.solution.some((digit, i) => digit !== puzzle.solution[i])) return null;
+  if (save.values.some((digit) => !Number.isInteger(digit) || digit < 0 || digit > 9)) return null;
+  if (save.marks.some((mask) => !Number.isInteger(mask) || mask < 0 || mask > 0x1ff)) return null;
+  return save;
+}
+
 export function unfinishedSaves(): SavedGame[] {
-  return Object.values(loadSaves()).sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0));
+  return Object.values(loadSaves())
+    .filter((save) => !saveComplete(save))
+    .sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0));
+}
+
+function saveComplete(save: SavedGame): boolean {
+  return save.puzzle.solution.every((digit, i) => digit === 0 || save.values[i] === digit);
 }
 
 export function putSave(save: SavedGame): void {
@@ -218,14 +243,18 @@ const MAX_CACHE = 24;
 type CacheTable = Record<string, Puzzle>;
 
 export function cachedPuzzle(id: PuzzleId): Puzzle | null {
+  if (id.source !== 'new') return null;
   return read<CacheTable>(KEY.cache, {})[historyKey(id)] ?? null;
 }
 
 export function cachePuzzle(id: PuzzleId, puzzle: Puzzle): void {
+  if (id.source !== 'new') return;
   const table = read<CacheTable>(KEY.cache, {});
-  table[historyKey(id)] = puzzle;
+  const key = historyKey(id);
+  delete table[key];
+  table[key] = puzzle;
   const keys = Object.keys(table);
-  if (keys.length > MAX_CACHE) for (const key of keys.slice(0, keys.length - MAX_CACHE)) delete table[key];
+  if (keys.length > MAX_CACHE) for (const extra of keys.slice(0, keys.length - MAX_CACHE)) delete table[extra];
   write(KEY.cache, table);
 }
 
@@ -264,32 +293,52 @@ export function retireGeneratedPuzzles(): number {
 // ------------------------------------------------------------- shared links
 
 /**
- * A link that opens one particular puzzle. Classic numbers name a pack entry
- * and New numbers name a seed, so both travel as nothing more than their id.
+ * A link that opens one particular puzzle. Classic numbers name a pack entry.
+ * New numbers name a seed *and* the generator that produced it — the same
+ * number from an older generator is a different grid.
  */
-export function puzzleLink(id: PuzzleId): string {
-  const url = new URL(window.location.href);
+export function puzzleLink(id: PuzzleId, href = window.location.href): string {
+  const url = new URL(href);
   url.hash = '';
   url.searchParams.set('p', formatPuzzleId(id));
+  if (id.source === 'new') url.searchParams.set('g', String(GENERATOR_VERSION));
+  else url.searchParams.delete('g');
   return url.toString();
 }
 
-export function linkedPuzzle(): PuzzleId | null {
-  const raw = new URL(window.location.href).searchParams.get('p');
+export type PuzzleLink =
+  | { ok: true; id: PuzzleId }
+  | { ok: false; reason: 'stale-generator' };
+
+/** Parse `p` / `g` off a URL. Missing `g` on a New link means generator 1. */
+export function parsePuzzleLink(href: string, generation = GENERATOR_VERSION): PuzzleLink | null {
+  const url = new URL(href, 'https://dandoku.com/kakuro/');
+  const raw = url.searchParams.get('p');
   if (!raw) return null;
   const match = /^([1-6])-(N?)(\d+)$/.exec(raw.trim());
   if (!match) return null;
-  return {
+  const id: PuzzleId = {
     level: Number(match[1]) as Level,
     source: match[2] ? 'new' : 'classic',
     number: Number(match[3]),
   };
+  if (id.source === 'new') {
+    const rawGeneration = url.searchParams.get('g');
+    const madeBy = rawGeneration === null ? 1 : Number(rawGeneration);
+    if (!Number.isInteger(madeBy) || madeBy !== generation) return { ok: false, reason: 'stale-generator' };
+  }
+  return { ok: true, id };
+}
+
+export function linkedPuzzle(): PuzzleLink | null {
+  return parsePuzzleLink(window.location.href);
 }
 
 /** Take the puzzle out of the address bar, so a reload does not reopen it. */
 export function clearPuzzleLink(): void {
   const url = new URL(window.location.href);
-  if (!url.searchParams.has('p')) return;
+  if (!url.searchParams.has('p') && !url.searchParams.has('g')) return;
   url.searchParams.delete('p');
+  url.searchParams.delete('g');
   window.history.replaceState(null, '', url.toString());
 }

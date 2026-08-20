@@ -1,0 +1,56 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; a half-published site would break the service
+# worker's precache list.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  # Build and deploy in one job: Actions bills per job with minutes rounded up,
+  # so splitting this in two would cost a whole extra minute for no benefit.
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # Typechecks, builds, then regenerates sw.js from the real output.
+      - run: npm run build
+
+      # The packs are committed, so this is checking what is about to ship
+      # rather than what was just generated: one answer each, by exhaustive
+      # search, and reachable without guessing.
+      - run: npm run verify
+
+      # Pages must already be enabled with "GitHub Actions" as the source. The
+      # workflow token cannot create the site itself — that needs admin rights
+      # it is not given — so enable it once in Settings > Pages, or via
+      # `gh api -X POST repos/OWNER/REPO/pages -f build_type=workflow`.
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v5

@@ -98,7 +98,7 @@ function connected(block: boolean[], size: number): boolean {
 }
 
 /** Runs of a legal length, and one connected field of white cells. */
-export function layoutIsLegal(block: boolean[], size: number): boolean {
+function layoutIsLegal(block: boolean[], size: number): boolean {
   const segments = findSegments(block, size);
   if (segments.length === 0) return false;
   for (const segment of segments) {
@@ -289,9 +289,4 @@ export function makeFiller(layout: Layout): Filler {
 
     return place(0) ? values : null;
   };
-}
-
-/** One complete fill from scratch. */
-export function fillLayout(layout: Layout, rnd: () => number): number[] | null {
-  return makeFiller(layout)(rnd, null);
 }

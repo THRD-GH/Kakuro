@@ -156,13 +156,15 @@ function judge(size: number, values: number[], wanted: number): Verdict {
  * 11 says very little and a grid full of them says nothing at all. Rather than
  * throw such a grid away — which is what a generator that samples and rejects
  * does, at odds of thousands to one — this keeps it and works on it. Clear the
- * cells that are at fault, fill them again, and see whether the grid got
- * closer. Ambiguity first, then answers the technique ladder cannot reach
- * without guessing, then the difficulty band.
+ * cells that are at fault, fill them again, and see whether the grid came out
+ * closer: first to being a puzzle at all, then to the difficulty asked for.
  *
  * It is a hill climb over the space of clue sets, and the reason it converges
- * is that the blame is always local: the cells two answers disagree about are
- * exactly the ones whose clues are not saying enough.
+ * is that the blame is always local. The cells the solver could not pin down
+ * are exactly the ones whose clues are not saying enough, so those are the
+ * cells whose clues get changed — and a clue only changes by rewriting the
+ * answer underneath it, which is why this clears and refills rather than
+ * editing the totals.
  */
 function refine(
   layout: Layout,

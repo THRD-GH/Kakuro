@@ -76,9 +76,6 @@ export interface PuzzleId {
 export const formatPuzzleId = (id: PuzzleId): string =>
   `${id.level}-${id.source === 'new' ? 'N' : ''}${id.number}`;
 
-export const samePuzzle = (a: PuzzleId, b: PuzzleId): boolean =>
-  a.level === b.level && a.number === b.number && a.source === b.source;
-
 /**
  * The same id as dandoku.com prints it, KA for Kakuro — KA5-27 rather than
  * 5-27. Display only: the plain form is what keys a save, a history entry and

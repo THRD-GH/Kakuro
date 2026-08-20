@@ -910,10 +910,12 @@ export function rate(result: GrindResult, whiteCells: number, size: number): num
  * Answers to a puzzle, up to `limit` of them. Propagation first, then a guess
  * at the tightest cell.
  *
- * The generator asks for more than one because it hill-climbs on the count:
- * knowing a grid has eleven answers rather than two is what tells it whether a
- * change to the clues helped. Which cells those answers disagree about is the
- * other half — that is where the next change gets aimed.
+ * Nothing in the game or the generator calls this: a puzzle the technique
+ * ladder finishes has one answer by construction, and searching for a second
+ * would only confirm what the ladder already proved. It exists for
+ * `tools/verify-packs.ts`, which checks the shipped puzzles by exhaustive
+ * search precisely *because* it does not share that reasoning — a proof and
+ * the thing it proves should not be the same piece of code.
  */
 export function solutions(puzzle: Puzzle, limit = 2): number[][] {
   const found: number[][] = [];

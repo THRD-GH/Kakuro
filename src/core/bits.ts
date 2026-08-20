@@ -28,12 +28,6 @@ export function onlyDigit(mask: number): number {
   return popcount(mask) === 1 ? 32 - Math.clz32(mask) : 0;
 }
 
-export function sumOfMask(mask: number): number {
-  let total = 0;
-  for (let d = 1; d <= 9; d++) if (mask & bit(d)) total += d;
-  return total;
-}
-
 /** "1, 4 and 7" — masks are shown to the player often enough to be worth it. */
 export function listDigits(mask: number): string {
   const digits = digitsOf(mask);

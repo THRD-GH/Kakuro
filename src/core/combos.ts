@@ -41,16 +41,6 @@ export function combosFor(size: number, sum: number): number[] {
   return TABLE[size][sum];
 }
 
-/** Smallest sum reachable with `size` distinct digits: 1+2+...+size. */
-export const minSum = (size: number): number => (size * (size + 1)) / 2;
-
-/** Largest sum reachable with `size` distinct digits: 9+8+...  */
-export const maxSum = (size: number): number => (size * (19 - size)) / 2;
-
-/** Whether a clue is writable at all — the generator never emits others. */
-export const sumIsPossible = (size: number, sum: number): boolean =>
-  size >= 1 && size <= 9 && sum >= minSum(size) && sum <= maxSum(size);
-
 /**
  * Combinations for the on-board table, narrowed by digits the player has
  * pinned in or ruled out. Keeps the table's order, so the ones starting with a
@@ -59,10 +49,3 @@ export const sumIsPossible = (size: number, sum: number): boolean =>
 export function findCombos(size: number, sum: number, include: number, exclude: number): number[] {
   return combosFor(size, sum).filter((m) => (m & include) === include && (m & exclude) === 0);
 }
-
-/**
- * The clues that admit exactly one combination — 3 in two cells is 1+2 and
- * nothing else. Worth naming because they are where every kakuro starts.
- */
-export const isUniqueClue = (size: number, sum: number): boolean =>
-  combosFor(size, sum).length === 1;

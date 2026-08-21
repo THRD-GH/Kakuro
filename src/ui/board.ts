@@ -1,6 +1,7 @@
 import { bit, digitsOf } from '../core/bits.ts';
 import type { Game } from '../game/state.ts';
 import type { Settings } from '../game/storage.ts';
+import type { Run } from '../core/types.ts';
 import { el } from './dom.ts';
 
 /**
@@ -200,16 +201,38 @@ export class Board {
       );
     }
 
-    // Clue cells wear the state of their own run: a run that is full and adds
-    // up goes quiet, and one that is full and does not goes red. Both are
-    // arithmetic the player can already do, so neither gives anything away.
+    /*
+     * A finished run is shown on the cells, not on the clue.
+     *
+     * The clue number used to turn green when its run added up, and green ink
+     * on a black square is not readable — the one place on the board where
+     * there is no contrast to spare. A cell settles instead: once *both* runs
+     * through it are full and add up, nothing about it can change any more,
+     * and it takes a green wash. That says the same thing in the place the
+     * player is actually looking, and it spreads across the grid as the puzzle
+     * comes together.
+     *
+     * A run that is full and does *not* add up still marks its clue, because
+     * that is where the arithmetic went wrong and there is nowhere else to
+     * point. It gets a wash rather than coloured ink, for the same reason.
+     */
+    const done = new Map<Run, boolean>();
     for (const run of game.puzzle.runs) {
+      const { full, left, repeated } = game.progress(run);
+      done.set(run, full && left === 0 && !repeated);
+
       const node = (run.dir === 'across' ? this.acrossClue : this.downClue)[run.clue];
       if (!node) continue;
-      const { full, left, repeated } = game.progress(run);
-      node.classList.toggle('met', full && left === 0 && !repeated);
       node.classList.toggle('bust', (full && (left !== 0 || repeated)) || left < 0);
       node.parentElement?.classList.toggle('lit', this.spotlit.has(run.clue));
+    }
+
+    for (let cell = 0; cell < this.cells.length; cell++) {
+      if (game.isClue(cell)) continue;
+      const across = game.acrossRun(cell);
+      const down = game.downRun(cell);
+      const settled = (!across || done.get(across) === true) && (!down || done.get(down) === true);
+      this.cells[cell].classList.toggle('settled', settled);
     }
   }
 }

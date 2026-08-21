@@ -533,14 +533,39 @@ p {
   left: 8%;
 }
 
-.cell.clue b.met {
-  color: var(--met);
+/*
+ * A run that is full and does not add up marks its clue — that is where the
+ * arithmetic went wrong and there is nowhere else to point. A wash behind the
+ * cell rather than coloured ink on it: the clue square is the one place on the
+ * board with no contrast to spare, and ink on black cannot be read.
+ */
+.cell.clue:has(b.bust) {
+  background: color-mix(in srgb, var(--block) 62%, var(--error));
 }
 
-.cell.clue b.bust {
-  color: var(--error);
-  text-decoration: underline;
-  text-underline-offset: 0.12em;
+/*
+ * A cell nothing can change any more: both the runs through it are full and
+ * add up. The wash spreads across the grid as the puzzle comes together, which
+ * is the reward for finishing a corner and is arithmetic the player could do
+ * unaided, so it gives nothing away.
+ */
+.cell.answer.settled {
+  background: color-mix(in srgb, var(--cell) 84%, var(--met));
+}
+
+/*
+ * The high-contrast theme tells nothing apart by colour alone, and a wash on
+ * black is barely a wash at all — so here a settled cell is outlined as well
+ * as tinted.
+ */
+:root[data-theme='contrast'] .cell.answer.settled {
+  background: color-mix(in srgb, var(--cell) 60%, var(--met));
+  box-shadow: inset 0 0 0 1px var(--met);
+}
+
+:root[data-theme='contrast'] .cell.clue:has(b.bust) {
+  background: var(--error);
+  color: #000000;
 }
 
 .cell.answer .digit {
@@ -570,11 +595,11 @@ p {
   line-height: 1;
 }
 
-.cell.peer {
+.cell.answer.peer {
   background: color-mix(in srgb, var(--cell), var(--peer));
 }
 
-.cell.same {
+.cell.answer.same {
   background: color-mix(in srgb, var(--cell), var(--same));
 }
 

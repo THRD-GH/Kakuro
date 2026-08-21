@@ -68,9 +68,15 @@ tapped by default. Hint is a tap unless you turn hold on in Settings.
 **Instant check** (off by default) flags a digit that already repeats in a run
 or overshoots a clue — it never looks up the answer.
 
-A clue goes green when its run is full and adds up, and red when it is full and
-does not. That is arithmetic the player can do unaided, so it gives nothing
-away.
+A cell settles — taking a green wash — once *both* runs through it are full and
+add up, so nothing about it can change again. The wash spreads across the grid
+as the puzzle comes together. A run that is full and does *not* add up washes
+its clue square red instead, because that is where the arithmetic went wrong
+and there is nowhere else to point. Both are sums the player could do unaided,
+so neither gives anything away.
+
+Neither is coloured *ink*: a clue square is the one place on the board with no
+contrast to spare, and green digits on black could not be read.
 
 ## Boards and levels
 

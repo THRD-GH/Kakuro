@@ -1,4 +1,4 @@
-import { bit } from '../core/bits.ts';
+import { bit, onlyDigit, popcount } from '../core/bits.ts';
 import { indexRuns } from '../core/types.ts';
 import type { Puzzle, PuzzleId, Run, RunIndex } from '../core/types.ts';
 import { saveFitsPuzzle, type SavedGame } from './storage.ts';
@@ -121,6 +121,71 @@ export class Game {
         for (const other of run.cells) {
           if (other !== cell) this.marks[other] &= ~bit(digit);
         }
+      }
+    }
+  }
+
+  /**
+   * A keypad tap, in the scheme the sudoku games use: the cell holds a *set*
+   * of digits, one showing as an answer and two or more as pencil marks.
+   *
+   * That one idea does away with the Notes mode. Tapping a second digit turns
+   * an answer into two marks, tapping a mark takes it out again, and crossing
+   * marks off until one is left answers the cell. Nothing has to be switched
+   * on first, which matters because the mode was invisible at the moment it
+   * counted — you find out which one you were in from what appears in the
+   * cell, and by then it is a move to undo.
+   */
+  tapDigit(cell: number, digit: number, allowSingleMark: boolean): void {
+    if (this.isClue(cell)) return;
+    this.remember();
+    const b = bit(digit);
+
+    if (this.values[cell] !== 0) {
+      // Tapping the digit that is already there is how it comes out again.
+      if (this.values[cell] === digit && !allowSingleMark) {
+        this.values[cell] = 0;
+        this.flagged.delete(cell);
+        return;
+      }
+      // Otherwise the answer demotes into the mark set and the new digit
+      // joins it — one digit meant an answer, two mean candidates.
+      this.marks[cell] = bit(this.values[cell]);
+      this.values[cell] = 0;
+      this.flagged.delete(cell);
+    }
+
+    // Whether this tap took a digit out of the cell rather than putting one in.
+    const removing = (this.marks[cell] & b) !== 0;
+    this.marks[cell] ^= b;
+
+    /*
+     * Crossing candidates off until one survives has answered the cell, so it
+     * resolves however the cell was being used. Putting a lone digit in is a
+     * different act, and that is the one the setting governs.
+     *
+     * No tidying of the runs here, deliberately: a tap is easy to make by
+     * accident, and it should never strike marks off elsewhere on the board.
+     * Forcing an answer is the deliberate version, and that one does.
+     */
+    if (popcount(this.marks[cell]) === 1 && (removing || !allowSingleMark)) {
+      this.values[cell] = onlyDigit(this.marks[cell]);
+      this.marks[cell] = 0;
+    }
+  }
+
+  /** Long-click or double-click: this digit is the answer, the marks go. */
+  forceDigit(cell: number, digit: number, autoRemoveMarks: boolean): void {
+    if (this.isClue(cell)) return;
+    this.remember();
+    this.values[cell] = digit;
+    this.marks[cell] = 0;
+    this.flagged.delete(cell);
+    if (!autoRemoveMarks) return;
+    for (const run of [this.acrossRun(cell), this.downRun(cell)]) {
+      if (!run) continue;
+      for (const other of run.cells) {
+        if (other !== cell) this.marks[other] &= ~bit(digit);
       }
     }
   }

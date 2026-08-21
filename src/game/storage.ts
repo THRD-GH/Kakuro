@@ -35,6 +35,8 @@ export interface Settings {
   /** Tint other cells holding the same digit. */
   highlightSameDigit: boolean;
   /** Writing a digit strikes it from the pencil marks in both its runs. */
+  /** On, a lone digit tapped in stays a pencil mark instead of answering the cell. */
+  allowSingleMark: boolean;
   autoRemoveMarks: boolean;
   /** Flag a repeat or overshoot the moment it is made, without consulting the answer. */
   instantCheck: boolean;
@@ -54,6 +56,7 @@ export const DEFAULT_SETTINGS: Settings = {
   size: 12,
   highlightRuns: true,
   highlightSameDigit: true,
+  allowSingleMark: false,
   autoRemoveMarks: true,
   instantCheck: false,
   showCombos: false,

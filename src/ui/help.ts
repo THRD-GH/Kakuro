@@ -26,9 +26,10 @@ export function openHelp(): void {
       ],
     ),
     section('Playing', [
-      'Tap a cell to select it, then tap a digit to write it in. Tapping the same digit again rubs it out.',
-      'Notes turns the keypad into pencil marks. Holding a digit does the other thing — a pencil mark while you are writing answers, an answer while you are pencilling.',
-      'Keyboard: arrows move, 1–9 write, Shift and a digit pencils, Backspace clears, N toggles notes, Z undoes, Y redoes. When Check, Hint or Clear is set to need a hold, the keyboard uses Shift with C, H or Backspace.',
+      'A cell holds a set of digits: one shows as an answer, two or more show as pencil marks. Tap a cell to select it, then tap digits to put them in and out of that set — so tapping a second digit turns an answer into two marks, and crossing marks off until one is left answers the cell.',
+      'Hold a digit, or double-tap it, to say straight out that it is the answer. Only that strikes the digit off the marks in the rest of both runs; a plain tap never changes anything outside its own cell.',
+      'Marks pencils in every candidate the clues still allow. Long-click Clear empties the cell.',
+      'Keyboard: arrows move, 1–9 toggle, Shift and a digit forces, Backspace clears, M fills the marks, Z undoes, Y redoes. When Check, Hint or Clear is set to need a hold, the keyboard uses Shift with C, H or Backspace.',
     ]),
     section('The table', [
       'The strip under the board lists every combination that still fits the two clues through the cell you are on — with the digits already written in taken out of both the total and the alphabet.',

@@ -29,7 +29,8 @@ const TOGGLES: { heading: string; items: Toggle[] }[] = [
   {
     heading: 'Writing',
     items: [
-      { key: 'autoRemoveMarks', label: 'Tidy pencil marks', note: 'Writing a digit strikes it from the marks in both its runs' },
+      { key: 'allowSingleMark', label: 'Allow single pencil marks', note: 'On, a lone digit you tap in stays a mark. Crossing marks off until one is left still answers the cell either way' },
+      { key: 'autoRemoveMarks', label: 'Tidy pencil marks', note: 'Forcing an answer — long-click or double-click — strikes that digit from the marks in both its runs. A plain tap never does' },
       { key: 'instantCheck', label: 'Flag broken runs at once', note: 'A repeat or an overshoot, not the hidden answer — Check still marks digits that are actually wrong' },
       { key: 'keepAwake', label: 'Keep the screen on', note: 'While a puzzle is open' },
     ],

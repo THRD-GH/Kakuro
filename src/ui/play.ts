@@ -23,12 +23,11 @@ export class PlayScreen {
 
   private clock: HTMLElement;
   private claim!: HTMLElement;
-  private noteButton: HTMLButtonElement;
+  private marksButton: HTMLButtonElement;
   private undoButton: HTMLButtonElement;
   private redoButton: HTMLButtonElement;
   private hintNote: HTMLElement;
 
-  private notes = false;
   private zoomed = false;
   private zoomButton!: HTMLButtonElement;
   private pauseButton!: HTMLButtonElement;
@@ -60,13 +59,19 @@ export class PlayScreen {
 
     this.hintNote = el('div', { class: 'hint-note', 'aria-live': 'polite' });
 
-    this.noteButton = el('button', {
+    /*
+     * The slot the Notes button used to hold. Nothing has to switch modes any
+     * more, so it went to the one writing job the keypad could not do: filling
+     * every cell's marks with what the clues still allow, which is where a lot
+     * of players start a hard grid.
+     */
+    this.marksButton = el('button', {
       class: 'key act',
       type: 'button',
-      'aria-pressed': 'false',
-      text: 'Notes',
+      title: 'Pencil in every candidate the clues still allow',
+      text: 'Marks',
     });
-    this.noteButton.addEventListener('click', () => this.setNotes(!this.notes));
+    this.marksButton.addEventListener('click', () => this.fillMarks());
 
     this.undoButton = el('button', {
       class: 'key act glyph',
@@ -206,11 +211,14 @@ export class PlayScreen {
     const pad = el('div', { class: 'keypad' });
     for (let digit = 1; digit <= 9; digit++) {
       const key = el('button', { class: 'key digit', type: 'button', text: String(digit) });
-      // Tap does whatever mode you are in; holding does the other one, so a
-      // stray pencil mark never needs a trip to the Notes button and back.
+      /*
+       * Tap toggles the digit in the cell's set; hold — or double-tap —
+       * forces it in as the answer and tidies the marks in both runs. There
+       * is no mode to be in and so no mode to be caught out by.
+       */
       bindTap(key, {
-        onTap: () => this.enter(digit, !this.notes),
-        onHold: () => this.enter(digit, this.notes),
+        onTap: () => this.tap(digit),
+        onHold: () => this.force(digit),
       });
       pad.append(key);
     }
@@ -270,7 +278,7 @@ export class PlayScreen {
         el(
           'div',
           { class: 'actions' },
-          this.noteButton,
+          this.marksButton,
           erase,
           check,
           hint,
@@ -333,26 +341,28 @@ export class PlayScreen {
     this.combos.show(cell);
   }
 
-  private setNotes(on: boolean): void {
-    this.notes = on;
-    this.noteButton.setAttribute('aria-pressed', String(on));
-    this.noteButton.classList.toggle('on', on);
-  }
-
-  /** A digit from the keypad or the keyboard. `asAnswer` decides which it is. */
-  private enter(digit: number, asAnswer: boolean): void {
+  /** The cell a digit is going into, with the hint display cleared off it. */
+  private target(): number {
     const cell = this.board.selection;
-    if (cell < 0 || this.game.isClue(cell)) return;
+    if (cell < 0 || this.game.isClue(cell)) return -1;
     this.board.clearSpotlight();
     clear(this.hintNote);
+    return cell;
+  }
 
-    if (asAnswer) {
-      const already = this.game.values[cell] === digit;
-      this.game.write(cell, already ? 0 : digit, this.app.settings.autoRemoveMarks);
-    } else {
-      this.game.toggleMark(cell, digit);
-    }
+  /** A plain tap: toggle the digit in the cell's set. */
+  private tap(digit: number): void {
+    const cell = this.target();
+    if (cell < 0) return;
+    this.game.tapDigit(cell, digit, this.app.settings.allowSingleMark);
+    this.afterEdit();
+  }
 
+  /** Hold, double-tap or Shift+digit: this is the answer, and say so. */
+  private force(digit: number): void {
+    const cell = this.target();
+    if (cell < 0) return;
+    this.game.forceDigit(cell, digit, this.app.settings.autoRemoveMarks);
     this.afterEdit();
   }
 
@@ -408,7 +418,8 @@ export class PlayScreen {
     const key = e.key;
 
     if (key >= '1' && key <= '9') {
-      this.enter(Number(key), this.notes === e.shiftKey);
+      if (e.shiftKey) this.force(Number(key));
+      else this.tap(Number(key));
       e.preventDefault();
       return;
     }
@@ -432,9 +443,9 @@ export class PlayScreen {
         if (this.app.settings.clearNeedsHold && !e.shiftKey) break;
         this.eraseCell();
         break;
-      case 'n':
-      case 'N':
-        this.setNotes(!this.notes);
+      case 'm':
+      case 'M':
+        this.fillMarks();
         break;
       case 'z':
       case 'Z':

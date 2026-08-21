@@ -27,17 +27,31 @@ may repeat elsewhere, which is what makes this not sudoku.
 
 ## Controls
 
+The cell holds a *set* of digits: one digit shows as an answer, two or more
+show as pencil marks. That single idea explains the whole keypad — and it is
+why there is no Notes mode.
+
 | Gesture | Effect |
 | --- | --- |
 | Tap cell | Select it — on press, not release, so a tap that drifts still lands |
-| Tap keypad digit | Write it in — or pencil it, in Notes. Pencil marks stay under an answer until Clear. |
-| Long-click / double-click a digit | The other one: a pencil mark while writing answers, an answer while pencilling |
+| Tap a keypad digit | Toggle that digit in the cell |
+| Long-click / double-click a digit | Force it in as the answer, tidying the marks in both its runs |
 | Long-click Clear | Empty the cell |
+| Marks | Pencil in every candidate the clues still allow |
 
-Keyboard: arrows move, `1`–`9` write, `Shift`+digit pencils, `Backspace`
-clears, `N` toggles notes, `Z` undoes, `Y` redoes. When Check, Hint or Clear
+Keyboard: arrows move, `1`–`9` toggle, `Shift`+digit forces, `Backspace`
+clears, `M` fills the marks, `Z` undoes, `Y` redoes. When Check, Hint or Clear
 is set to need a hold, the matching keys are `Shift+C`, `Shift+H` and
 `Shift+Backspace`.
+
+A mode is the wrong shape for this. It was invisible at the moment it counted:
+you found out which one you were in from what came up in the cell, and by then
+it was a move to undo. Tapping a second digit demoting the answer to two marks
+is the same act as tapping the second candidate, and crossing marks off until
+one is left answers the cell, so the two ways of playing are one gesture rather
+than a switch between them. Only forcing an answer strikes that digit off the
+rest of both runs — a tap is far too easy to make by accident to let it change
+anything outside its own cell.
 
 **Zoom** trades fitting the board on screen for cells you can actually hit.
 Fitted to a phone, a 20×20 gives each cell about fifteen pixels: the answers

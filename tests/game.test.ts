@@ -182,3 +182,91 @@ test('restart empties the grid but can itself be undone', () => {
   game.undo();
   assert.equal(game.values[cell], puzzle.solution[cell], 'restart should be undoable like any other move');
 });
+
+/*
+ * The modeless keypad: the cell holds a set of digits, one showing as an
+ * answer and two or more as pencil marks. These are the rules that replaced
+ * the Notes mode, so they are worth pinning down.
+ */
+test('a second digit turns an answer into two pencil marks', () => {
+  const game = newGame();
+  const cell = firstAnswerCell();
+
+  game.tapDigit(cell, 4, false);
+  assert.equal(game.values[cell], 4, 'one digit is an answer');
+  assert.equal(game.marks[cell], 0);
+
+  game.tapDigit(cell, 7, false);
+  assert.equal(game.values[cell], 0, 'two digits are candidates, not an answer');
+  assert.equal(game.marks[cell], bit(4) | bit(7));
+});
+
+test('crossing marks off until one is left answers the cell', () => {
+  const game = newGame();
+  const cell = firstAnswerCell();
+
+  for (const digit of [2, 5, 8]) game.tapDigit(cell, digit, false);
+  assert.equal(game.marks[cell], bit(2) | bit(5) | bit(8));
+
+  game.tapDigit(cell, 2, false);
+  game.tapDigit(cell, 8, false);
+  assert.equal(game.values[cell], 5, 'the survivor becomes the answer');
+  assert.equal(game.marks[cell], 0);
+});
+
+test('a lone mark stays a mark when the player asks for it', () => {
+  const game = newGame();
+  const cell = firstAnswerCell();
+
+  game.tapDigit(cell, 3, true);
+  assert.equal(game.values[cell], 0);
+  assert.equal(game.marks[cell], bit(3));
+
+  // Crossing off still resolves, whatever the setting says.
+  game.tapDigit(cell, 6, true);
+  game.tapDigit(cell, 3, true);
+  assert.equal(game.values[cell], 6);
+});
+
+test('tapping the digit already in the cell takes it out', () => {
+  const game = newGame();
+  const cell = firstAnswerCell();
+
+  game.tapDigit(cell, 9, false);
+  game.tapDigit(cell, 9, false);
+  assert.equal(game.values[cell], 0);
+  assert.equal(game.marks[cell], 0);
+});
+
+test('a plain tap never touches marks elsewhere, but forcing does', () => {
+  const game = newGame();
+  const cell = firstAnswerCell();
+  const run = game.acrossRun(cell) ?? game.downRun(cell)!;
+  const peers = run.cells.filter((c) => c !== cell);
+
+  for (const peer of peers) game.toggleMark(peer, 6);
+
+  game.tapDigit(cell, 6, false);
+  for (const peer of peers) {
+    assert.equal(game.marks[peer] & bit(6), bit(6), 'a tap is too easy to make by accident');
+  }
+
+  game.forceDigit(cell, 6, true);
+  assert.equal(game.values[cell], 6);
+  for (const peer of peers) assert.equal(game.marks[peer] & bit(6), 0);
+});
+
+test('every keypad tap is one undo', () => {
+  const game = newGame();
+  const cell = firstAnswerCell();
+
+  game.tapDigit(cell, 1, false);
+  game.tapDigit(cell, 2, false);
+  assert.equal(game.marks[cell], bit(1) | bit(2));
+
+  game.undo();
+  assert.equal(game.values[cell], 1);
+  game.undo();
+  assert.equal(game.values[cell], 0);
+  assert.equal(game.marks[cell], 0);
+});

@@ -9,7 +9,8 @@ import { dropSave, puzzleLink, putSave, recordFinish, recordStart } from '../gam
 import type { AppContext } from './app-context.ts';
 import { Board } from './board.ts';
 import { CombosPanel } from './combos.ts';
-import { clear, el, formatTime, onHold } from './dom.ts';
+import { clear, el, formatTime } from './dom.ts';
+import { bindTap } from './pointer.ts';
 import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
 
 export class PlayScreen {
@@ -28,6 +29,8 @@ export class PlayScreen {
   private hintNote: HTMLElement;
 
   private notes = false;
+  private zoomed = false;
+  private zoomButton!: HTMLButtonElement;
   /** How far down the current line of reasoning Hint has walked. */
   private hintDepth = 0;
   private ticker: number | null = null;
@@ -75,6 +78,13 @@ export class PlayScreen {
     );
 
     this.applyCombosSetting();
+    /*
+     * Big boards start zoomed on a narrow screen. Fitted to a phone, a 20x20
+     * gives each cell about eighteen pixels: the answers are still readable but
+     * a two-figure clue in half of that is not, and it is below the size a
+     * thumb can hit. On anything wider there is room to show the whole board.
+     */
+    this.setZoom(puzzle.size >= 16 && window.innerWidth < 520);
     this.tick();
     this.ticker = window.setInterval(() => this.tick(), 500);
     if (this.game.complete) {
@@ -124,17 +134,16 @@ export class PlayScreen {
       const key = el('button', { class: 'key digit', type: 'button', text: String(digit) });
       // Tap does whatever mode you are in; holding does the other one, so a
       // stray pencil mark never needs a trip to the Notes button and back.
-      onHold(
-        key,
-        () => this.enter(digit, this.notes),
-        () => this.enter(digit, !this.notes),
-      );
+      bindTap(key, {
+        onTap: () => this.enter(digit, !this.notes),
+        onHold: () => this.enter(digit, this.notes),
+      });
       pad.append(key);
     }
 
     const erase = el('button', { class: 'key edit', type: 'button', text: 'Clear' });
-    if (this.app.settings.clearNeedsHold) onHold(erase, () => this.eraseCell());
-    else erase.addEventListener('click', () => this.eraseCell());
+    if (this.app.settings.clearNeedsHold) bindTap(erase, { onHold: () => this.eraseCell() });
+    else bindTap(erase, { onTap: () => this.eraseCell() });
 
     return el(
       'div',
@@ -146,12 +155,12 @@ export class PlayScreen {
 
   private actions(): HTMLElement {
     const check = el('button', { class: 'action', type: 'button', text: 'Check' });
-    if (this.app.settings.checkNeedsHold) onHold(check, () => this.check());
-    else check.addEventListener('click', () => this.check());
+    if (this.app.settings.checkNeedsHold) bindTap(check, { onHold: () => this.check() });
+    else bindTap(check, { onTap: () => this.check() });
 
     const hint = el('button', { class: 'action', type: 'button', text: 'Hint' });
-    if (this.app.settings.hintNeedsHold) onHold(hint, () => this.hint());
-    else hint.addEventListener('click', () => this.hint());
+    if (this.app.settings.hintNeedsHold) bindTap(hint, { onHold: () => this.hint() });
+    else bindTap(hint, { onTap: () => this.hint() });
 
     const table = el('button', { class: 'action', type: 'button', text: 'Table' });
     table.addEventListener('click', () => {
@@ -159,7 +168,23 @@ export class PlayScreen {
       this.applyCombosSetting();
     });
 
-    return el('div', { class: 'actions' }, check, hint, table);
+    this.zoomButton = el('button', {
+      class: 'action',
+      type: 'button',
+      'aria-pressed': 'false',
+      text: 'Zoom',
+    });
+    this.zoomButton.addEventListener('click', () => this.setZoom(!this.zoomed));
+
+    return el('div', { class: 'actions' }, check, hint, table, this.zoomButton);
+  }
+
+  private setZoom(on: boolean): void {
+    this.zoomed = on;
+    this.zoomButton.setAttribute('aria-pressed', String(on));
+    this.zoomButton.classList.toggle('on', on);
+    this.node.querySelector('.board-wrap')?.classList.toggle('zoomed', on);
+    if (this.board.selection >= 0) this.board.select(this.board.selection);
   }
 
   private applyCombosSetting(): void {

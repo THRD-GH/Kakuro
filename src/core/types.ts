@@ -66,19 +66,69 @@ export const SOURCE_LABELS: Record<Source, string> = { classic: 'Classic', new: 
 
 export const sourceLabel = (source: Source): string => SOURCE_LABELS[source];
 
-/** Stable puzzle identifier, displayed as "3-10" classic or "3-N10" new. */
+/**
+ * The boards on offer, as the full grid dimension — a 12 is eleven cells of
+ * answers with a margin of clues along the top and left.
+ *
+ * Size is the player's own choice and sits *beside* the level rather than
+ * inside it: a 20 is a longer afternoon than a 9, not a harder one. Four steps
+ * rather than a slider, because each has to carry a whole shipped collection
+ * and be worth telling apart on a phone.
+ */
+export const SIZES = [9, 12, 16, 20] as const;
+
+export type Size = (typeof SIZES)[number];
+
+export const isSize = (n: number): n is Size => (SIZES as readonly number[]).includes(n);
+
+/** What each board is called, where there is room for a word but not a grid. */
+export const SIZE_LABELS: Record<Size, string> = {
+  9: 'Small',
+  12: 'Medium',
+  16: 'Large',
+  20: 'Huge',
+};
+
+/** Stable puzzle identifier: size, level, and a number within that pair. */
 export interface PuzzleId {
+  size: Size;
   level: Level;
   number: number;
   source: Source;
 }
 
+/**
+ * The key form, used for save slots, history and the `p=` in a shared link.
+ *
+ * Size leads, because it has to be in here: puzzle 10 of level 3 is a
+ * different grid on a 12 than on a 16, and without the size in the key the two
+ * would share a save slot and a history entry and quietly overwrite each other.
+ */
 export const formatPuzzleId = (id: PuzzleId): string =>
-  `${id.level}-${id.source === 'new' ? 'N' : ''}${id.number}`;
+  `${id.size}-${id.level}-${id.source === 'new' ? 'N' : ''}${id.number}`;
+
+const ID_PATTERN = /^(\d{1,2})-([1-6])-(N?)(\d+)$/;
+
+export function parsePuzzleId(raw: string): PuzzleId | null {
+  const match = ID_PATTERN.exec(raw.trim());
+  if (!match) return null;
+  const size = Number(match[1]);
+  if (!isSize(size)) return null;
+  return {
+    size,
+    level: Number(match[2]) as Level,
+    source: match[3] ? 'new' : 'classic',
+    number: Number(match[4]),
+  };
+}
+
+export const samePuzzle = (a: PuzzleId, b: PuzzleId): boolean =>
+  formatPuzzleId(a) === formatPuzzleId(b);
 
 /**
- * The same id as dandoku.com prints it, KA for Kakuro — KA5-27 rather than
- * 5-27. Display only: the plain form is what keys a save, a history entry and
- * a shared link, and those are not worth breaking for two letters.
+ * The id as dandoku.com prints it, KA for Kakuro. The size is left out: it is
+ * on screen beside this in every place the id appears, as `12×12`, and a
+ * reader who wants to know how big the board is can see the board.
  */
-export const displayPuzzleId = (id: PuzzleId): string => `KA${formatPuzzleId(id)}`;
+export const displayPuzzleId = (id: PuzzleId): string =>
+  `KA${id.level}-${id.source === 'new' ? 'N' : ''}${id.number}`;

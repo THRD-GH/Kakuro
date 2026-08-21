@@ -1,5 +1,5 @@
 import './style.css';
-import type { Level, PuzzleId, Source } from './core/types.ts';
+import type { Level, PuzzleId, Size, Source } from './core/types.ts';
 import { displayPuzzleId } from './core/types.ts';
 import { getPuzzle, prefetch } from './game/generate.ts';
 import { packCounts } from './game/packs.ts';
@@ -12,12 +12,13 @@ import {
   loadHistory,
   loadSaveFor,
   loadSettings,
+  saveSettings,
   saveFitsPuzzle,
   retireGeneratedPuzzles,
   unplayedNumbers,
 } from './game/storage.ts';
 import type { History, Settings, Theme } from './game/storage.ts';
-import type { AppContext } from './ui/app-context.ts';
+import type { AppContext, PackCounts } from './ui/app-context.ts';
 import { clear, el } from './ui/dom.ts';
 import { openHelp } from './ui/help.ts';
 import { buildMenu } from './ui/menu.ts';
@@ -42,7 +43,7 @@ const forgotten = retireGeneratedPuzzles();
 class App implements AppContext {
   settings: Settings = loadSettings();
   history: History = loadHistory();
-  packCounts: Record<number, number> | null = null;
+  packCounts: PackCounts | null = null;
   readonly newPoolSize = NEW_POOL_SIZE;
 
   private root: HTMLElement;
@@ -163,16 +164,29 @@ class App implements AppContext {
       });
   }
 
+  /** The board the menu is set to. */
+  get size(): Size {
+    return this.settings.size;
+  }
+
+  setSize(size: Size): void {
+    if (this.settings.size === size) return;
+    this.settings.size = size;
+    saveSettings(this.settings);
+    this.goMenu();
+  }
+
   playRandom(level: Level, source: Source): void {
-    const pool = source === 'classic' ? (this.packCounts?.[level] ?? 0) : this.newPoolSize;
+    const size = this.size;
+    const pool = source === 'classic' ? (this.packCounts?.[size]?.[level] ?? 0) : this.newPoolSize;
     if (pool === 0) {
-      toast('That level has no puzzles in this build');
+      toast(`Level ${level} has no Classic puzzles on a ${size}×${size} board`);
       return;
     }
-    const unplayed = unplayedNumbers(this.history, level, source, pool);
+    const unplayed = unplayedNumbers(this.history, { size, level, source }, pool);
     const from = unplayed.length > 0 ? unplayed : Array.from({ length: pool }, (_, i) => i + 1);
     const number = from[Math.floor(Math.random() * from.length)];
-    this.playPuzzle({ level, number, source });
+    this.playPuzzle({ size, level, number, source });
   }
 
   // ----------------------------------------------------------------- settings

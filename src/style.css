@@ -383,26 +383,122 @@ p {
   background: var(--panel-2);
 }
 
+/*
+ * The play screen is one screenful, never a scroll. A board you have to scroll
+ * away from to reach the keypad is a board you cannot play: every digit costs a
+ * scroll down to press it and a scroll up to see where it went. So the column
+ * is the height of the viewport, the controls take what they need, and the
+ * board takes the rest — square, centred, and as large as that leaves room for.
+ */
+.play {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: calc(100dvh - 1.5rem);
+  overflow: hidden;
+}
+
 .board-wrap {
-  container-type: inline-size;
+  /* `0` rather than `auto` for the basis: a flex item sized from its content
+     has an indefinite height, and the board inside needs a definite one to
+     measure itself against. */
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  container-type: size;
+  display: grid;
+  place-items: center;
 }
 
 .board {
-  --cell-size: calc(100cqw / var(--n));
+  /*
+   * `cqh` rather than `cqw`: the board is square but which dimension is doing
+   * the constraining depends on the screen, and a cell measured off the wrong
+   * one is a cell whose digits do not fit.
+   */
+  /*
+   * The largest square that fits the space left over, centred in it.
+   *
+   * Taken out of flow on purpose. In flow, the board is a flex item whose own
+   * contents are size-contained, so a percentage height has nothing definite
+   * to resolve against; the grid collapsed to a few pixels on a wide screen
+   * while looking perfectly fine on a phone, because there the width was doing
+   * the constraining instead. Positioned, the percentage resolves against the
+   * wrap's own box, which is definite once the column has been laid out.
+   */
+  container-type: size;
   display: grid;
   grid-template-columns: repeat(var(--n), 1fr);
   gap: 1px;
-  aspect-ratio: 1;
+  /*
+   * Square, and as large as the smaller side of the wrap allows. Setting one
+   * side to 100% and leaning on aspect-ratio for the other does not work:
+   * max-width clamps the width without feeding back into an explicit height,
+   * so the board came out 474 wide and 1399 tall on a wide screen.
+   */
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
   background: var(--rule);
   border: 2px solid var(--line-strong);
-  font-size: calc(var(--cell-size) * 0.5);
+  box-shadow: 0 6px 22px var(--shadow);
   user-select: none;
+  -webkit-user-select: none;
+  /*
+   * `none`, not `manipulation`: manipulation still leaves panning on the table,
+   * so a tap with the smallest drag can be reinterpreted as a scroll and the
+   * pointer cancelled mid-gesture. There is nothing to pan here — until the
+   * board is zoomed, where the scroll pane below takes it back.
+   */
+  touch-action: none;
+}
+
+/*
+ * Zoom, for the boards where fitting the screen makes the clues unreadable.
+ * A 20x20 on a phone is an eighteen-pixel cell: the answer digits survive
+ * that, but a two-figure clue in half a cell does not, and an eighteen-pixel
+ * tap target is below what a thumb can reliably hit. Zoomed, cells hold a
+ * floor size and the board scrolls inside its pane, with the selected cell
+ * kept in view as the cursor moves.
+ */
+.board-wrap.zoomed {
+  display: block;
+  container-type: normal;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.board-wrap.zoomed .cell {
+  --cell-size: 2.3rem;
+}
+
+.board-wrap.zoomed .board {
+  --cell-size: 2.3rem;
+  container-type: normal;
+  width: calc(var(--n) * var(--cell-size));
+  height: calc(var(--n) * var(--cell-size));
+  max-width: none;
+  max-height: none;
+  margin: 0 auto;
+  touch-action: pan-x pan-y;
 }
 
 .cell {
+  /*
+   * The cell size is worked out *here* rather than on the board, and that is
+   * not a stylistic choice: a container query unit used on the container
+   * itself resolves against the container above it, so `100cqh` on .board
+   * measured something else entirely and every digit came out the wrong size.
+   * On a descendant it resolves against .board, which is what was wanted.
+   */
+  --cell-size: calc(100cqh / var(--n));
   position: relative;
   display: grid;
   place-items: center;
+  font-size: calc(var(--cell-size) * 0.52);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background: var(--cell);
   font-style: normal;
   line-height: 1;
@@ -512,8 +608,9 @@ p {
 /* --------------------------------------------------------- combination table */
 
 .combos-wrap {
-  margin-top: 0.55rem;
-  overflow: hidden;
+  flex: 0 0 auto;
+  max-height: 30%;
+  overflow-y: auto;
 }
 
 .combos-wrap.folded {
@@ -588,9 +685,9 @@ p {
 /* -------------------------------------------------------------- the keypad */
 
 .keypad-wrap {
+  flex: 0 0 auto;
   display: flex;
   gap: 0.45rem;
-  margin-top: 0.6rem;
 }
 
 .keypad {
@@ -608,8 +705,11 @@ p {
 }
 
 .key {
-  padding: 0.55rem 0;
-  border-radius: 0.55rem;
+  /* A tap target you can hit without looking: 44px is the floor, and the
+     digits are pressed more than everything else in the game put together. */
+  min-height: 2.9rem;
+  padding: 0.4rem 0;
+  border-radius: 0.6rem;
 }
 
 .key.digit {
@@ -636,15 +736,16 @@ p {
 }
 
 .actions {
+  flex: 0 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.35rem;
-  margin-top: 0.45rem;
 }
 
 .action {
-  padding: 0.55rem 0;
-  font-size: 0.9rem;
+  min-height: 2.6rem;
+  padding: 0.4rem 0;
+  font-size: 0.88rem;
 }
 
 .action.holding {
@@ -659,7 +760,7 @@ p {
 
 .hint-note {
   position: relative;
-  margin-top: 0.55rem;
+  flex: 0 0 auto;
   padding: 0.6rem 2rem 0.6rem 0.7rem;
   border: 1px solid var(--accent);
   border-left-width: 4px;
@@ -1022,6 +1123,12 @@ p {
 }
 
 /* Wide enough for the keypad to sit beside the board rather than under it. */
+/*
+ * Wide enough for the keypad to sit beside the board rather than under it.
+ * The column layout underneath still governs the height, so the board keeps
+ * taking whatever is left after the controls — this only moves the controls
+ * out of the stack and gives the grid the width they were using.
+ */
 @media (min-width: 46rem) and (min-height: 34rem) {
   #app {
     max-width: 54rem;
@@ -1030,44 +1137,205 @@ p {
   .play {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 15rem;
-    gap: 0.75rem;
-    align-items: start;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    gap: 0.5rem 0.75rem;
+    align-items: stretch;
   }
 
   .play-bar {
     grid-column: 1 / -1;
+    grid-row: 1;
   }
+
+  /* The board spans every row below the bar, so it is the tallest thing here. */
   .board-wrap {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 2 / -1;
   }
-  .hint-note {
-    grid-column: 1;
-    grid-row: 3;
-    margin-top: 0;
-  }
-  .combos-wrap {
-    grid-column: 1;
-    grid-row: 4;
-    margin-top: 0;
-  }
+
   .keypad-wrap {
     grid-column: 2;
     grid-row: 2;
     display: grid;
+    grid-template-rows: auto auto;
     gap: 0.4rem;
-    margin-top: 0;
+    align-content: start;
   }
+
   .keypad-side {
     width: auto;
     grid-template-rows: none;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
+
   .actions {
     grid-column: 2;
-    grid-row: 3 / span 2;
+    grid-row: 3;
+    grid-template-columns: repeat(2, 1fr);
     align-self: start;
-    grid-template-columns: 1fr;
-    margin-top: 0;
+  }
+
+  .play > .hint-note {
+    grid-column: 2;
+    grid-row: 4;
+    align-self: start;
+  }
+
+  .play > .combos-wrap {
+    grid-column: 2;
+    grid-row: 5;
+    max-height: none;
+    align-self: start;
+  }
+}
+
+/* ------------------------------------------------------------ board picker */
+
+.sizes {
+  margin-bottom: 1.1rem;
+}
+
+.sizes h2 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--dim);
+  margin-bottom: 0.45rem;
+}
+
+.size-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.size-choice {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  padding: 0.55rem 0.3rem 0.45rem;
+}
+
+.size-choice b {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.size-choice span {
+  font-size: 0.68rem;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.size-choice.on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/*
+ * A scrap of the board itself, at the density that size is really drawn at, so
+ * the choice reads as "how much grid" rather than as four numbers.
+ */
+.size-glyph {
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--line-strong);
+  background:
+    repeating-linear-gradient(to right, var(--rule) 0 1px, transparent 1px var(--step)),
+    repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px var(--step)),
+    var(--cell);
+}
+
+.size-9 {
+  --step: 0.32rem;
+}
+.size-12 {
+  --step: 0.24rem;
+}
+.size-16 {
+  --step: 0.18rem;
+}
+.size-20 {
+  --step: 0.14rem;
+}
+
+.resume-size {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Landscape on a phone, where height is the scarce thing: the board takes the
+ * full height and the controls move to a column beside it. Stacking here would
+ * push the keypad off the bottom of the screen.
+ */
+@media (orientation: landscape) and (max-height: 560px) {
+  #app {
+    max-width: none;
+    padding: 0.4rem;
+  }
+
+  .play {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 16rem);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 0.4rem 0.5rem;
+    height: calc(100dvh - 0.8rem);
+  }
+
+  .play-bar {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    padding: 0;
+  }
+
+  /* The board spans every remaining row: nothing sits above or below it. */
+  .board-wrap {
+    grid-column: 1;
+    grid-row: 2 / -1;
+  }
+
+  .play > .hint-note {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  /* The table needs width to be worth reading, and there is none to spare. */
+  .play > .combos-wrap {
+    display: none;
+  }
+
+  .keypad-wrap {
+    grid-column: 2;
+    grid-row: 3;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .keypad {
+    flex: 1 1 auto;
+    grid-auto-rows: minmax(0, 1fr);
+  }
+
+  .keypad-side {
+    width: auto;
+    grid-template-rows: none;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .actions {
+    grid-column: 2;
+    grid-row: 4;
+  }
+
+  .key {
+    min-height: 0;
+  }
+
+  .action {
+    min-height: 2.1rem;
+    font-size: 0.8rem;
   }
 }

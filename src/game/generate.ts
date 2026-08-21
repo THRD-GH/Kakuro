@@ -50,12 +50,12 @@ function ensureWorker(): Worker | null {
 
 function requestGenerated(id: PuzzleId): Promise<Puzzle> {
   const w = ensureWorker();
-  if (!w) return Promise.resolve(generatePuzzle(id.level, id.number));
+  if (!w) return Promise.resolve(generatePuzzle(id));
   const token = nextToken++;
   return new Promise<Puzzle>((resolve, reject) => {
     pending.set(token, { resolve, reject });
-    w.postMessage({ token, level: id.level, number: id.number });
-  }).catch(() => generatePuzzle(id.level, id.number));
+    w.postMessage({ token, id });
+  }).catch(() => generatePuzzle(id));
 }
 
 export async function getPuzzle(id: PuzzleId): Promise<Puzzle> {
@@ -64,7 +64,7 @@ export async function getPuzzle(id: PuzzleId): Promise<Puzzle> {
 
   // Classic puzzles are a lookup, not a search — no worker needed.
   if (id.source === 'classic') {
-    return classicPuzzle(id.level, id.number);
+    return classicPuzzle(id.size, id.level, id.number);
   }
 
   const key = puzzleKey(id);

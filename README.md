@@ -10,9 +10,8 @@ Vite + TypeScript, no runtime dependencies. `npm run dev`, `npm run build`,
 ## Installing
 
 It is a PWA: installable from the browser, and it runs offline. The service
-worker precaches the whole app, the 900-puzzle Classic collection included —
-that is under 200 kB altogether, so there is nothing to gain by fetching the
-packs lazily and a train journey to lose.
+worker precaches the whole app, the Classic collection included, so there is
+nothing to gain by fetching the packs lazily and a train journey to lose.
 
 `npm run build` regenerates `dist/sw.js` from the actual build output, so the
 precache list always matches the hashed filenames. `npm run icons` redraws the
@@ -30,7 +29,7 @@ may repeat elsewhere, which is what makes this not sudoku.
 
 | Gesture | Effect |
 | --- | --- |
-| Tap cell | Select it |
+| Tap cell | Select it — on press, not release, so a tap that drifts still lands |
 | Tap keypad digit | Write it in — or pencil it, in Notes. Pencil marks stay under an answer until Clear. |
 | Long-click / double-click a digit | The other one: a pencil mark while writing answers, an answer while pencilling |
 | Long-click Clear | Empty the cell |
@@ -39,6 +38,12 @@ Keyboard: arrows move, `1`–`9` write, `Shift`+digit pencils, `Backspace`
 clears, `N` toggles notes, `Z` undoes, `Y` redoes. When Check, Hint or Clear
 is set to need a hold, the matching keys are `Shift+C`, `Shift+H` and
 `Shift+Backspace`.
+
+**Zoom** trades fitting the board on screen for cells you can actually hit.
+Fitted to a phone, a 20×20 gives each cell about fifteen pixels: the answers
+survive that but a two-figure clue in half of one does not, and it is well
+under the size a thumb can hit. Large and Huge boards therefore open zoomed on
+a narrow screen, scrolling inside their pane with the cursor kept in view.
 
 **The table** under the board lists every combination that still fits the two
 clues through the selected cell, with the digits already written in taken out
@@ -59,20 +64,44 @@ A clue goes green when its run is full and adds up, and red when it is full and
 does not. That is arithmetic the player can do unaided, so it gives nothing
 away.
 
-## Levels
+## Boards and levels
+
+Two separate choices. **Size** is how long you want to be here; **level** is how
+hard you want it to be.
+
+| Board | | Levels it reaches |
+| --- | --- | --- |
+| Small | 9×9 | all six |
+| Medium | 12×12 | all six |
+| Large | 16×16 | most |
+| Huge | 20×20 | the harder end |
+
+Size is deliberately not part of the difficulty rating. While it was, a 20×20
+that fell to plain combination sums was being filed as a black belt purely for
+being large. It now sits beside the level instead of inside it — but the two
+are not fully independent *facts*: a big board interlocks more, so its easy
+techniques run out sooner and its easy levels are genuinely scarce. A level
+with no puzzles on the chosen board is greyed out rather than faked.
+`node tools/matrix.ts` prints which pairs are reachable.
 
 Six levels, the same white-belt-to-1st-Dan ladder as the rest of the
 collection, and they mean something specific here: **a level is a rung of the
 technique ladder.**
 
-| Level | What the puzzle forces | Board |
-| --- | --- | --- |
-| 1 | Clues with only one combination | 8×8 |
-| 2 | Reading several combinations together | 9×9 |
-| 3 | A digit every combination needs, with one cell left to hold it | 9×9 |
-| 4 | Combinations that add up but cannot be written in | 10×10 |
-| 5 | Dealing combinations out across a run, cell by cell | 11×11 |
-| 6 | The same, on a grid that holds out most of the way | 11×11 |
+| Level | What the puzzle forces |
+| --- | --- |
+| 1 | Clues with only one combination |
+| 2 | The same, over more of the grid before it gives |
+| 3 | A digit every combination needs, with one cell left to hold it |
+| 4 | Combinations that add up but cannot be written in |
+| 5 | Dealing combinations out across a run, cell by cell |
+| 6 | The same, on a grid that holds out most of the way |
+
+Four rungs carry six levels, because two of the seven techniques cannot carry
+one: `unique-combination` is never the hardest thing a grid asks for, and
+`sum-difference` turns up in about one grid in fifty — hunted directly, it
+appeared once in six tries at 9×9 and not at all at 14×14. So the two abundant
+rungs are split by how much of the grid put up a fight.
 
 Solving a puzzle names the hardest technique it actually needed, on the win
 panel and in the header (`Unique combination · 8×8`), so the level number can
@@ -120,14 +149,17 @@ Two things make it fast enough to run in a worker:
   combination matching over a grid that is nowhere near being a puzzle is
   expensive work to reach a conclusion that was already clear.
 
-Levels come out at 15–500ms each. `node tools/shapes.ts` prints which board
-shapes yield which levels, and `node tools/prof.ts` says where the time goes.
+Levels come out in tens to hundreds of milliseconds. `node tools/matrix.ts`
+prints which size-and-level pairs are reachable, `node tools/density.ts` the
+black ratio each board wants, `node tools/effort.ts` the spread the level bands
+are cut from, and `node tools/prof.ts` where the time goes.
 
 ## Commands
 
 - `npm run dev` — development server
 - `npm run build` — typecheck, build into `dist/`, regenerate `sw.js`
-- `npm run packs` — rebuild `public/packs/` (150 per level, about a minute)
+- `npm run packs [minutes]` — rebuild `public/packs/`, one file per board and
+  level, time-boxed so a scarce pair cannot eat the whole budget
 - `npm run verify` — check every shipped puzzle by exhaustive search
 - `npm test` — fast checks of the ladder, pack encoding, and shared links
 - `npm run icons` — redraw `public/icons/`

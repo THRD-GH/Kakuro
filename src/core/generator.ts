@@ -3,7 +3,7 @@ import { makeFiller, makeLayout } from './layout.ts';
 import type { Filler, Layout } from './layout.ts';
 import { mulberry32, seedFor, shuffle } from './rng.ts';
 import { Solver, TECHNIQUE_WEIGHT, rate } from './solver.ts';
-import type { Level, Puzzle } from './types.ts';
+import type { Level, Puzzle, Size } from './types.ts';
 import { popcount } from './bits.ts';
 
 /**
@@ -14,39 +14,46 @@ import { popcount } from './bits.ts';
 export const GENERATOR_VERSION = 1;
 
 /**
- * The shape of a grid at each level. Size grows gently — a bigger kakuro is a
- * longer sitting rather than a harder one — and the black ratio does the rest:
- * fewer blocks means longer runs, more combinations per clue, and less that
- * falls out of the arithmetic on its own.
+ * How much of a board to black out, given the size asked for and the level
+ * wanted. This is the only shape knob: size now comes from the player.
+ *
+ * Two forces, and the second one is not obvious. Fewer blocks means longer
+ * runs, more combinations per clue and less that falls out of the arithmetic,
+ * so an easy puzzle wants a denser pattern — that much is expected. But a
+ * *bigger* board also wants a denser one to stay easy, because its runs
+ * interlock more and the easy techniques run out sooner: sampled at one
+ * density, a 20x20 produced nothing below level 5 at all, while the same board
+ * at four points denser gave up level 1s and generated three times faster
+ * besides. `node tools/density.ts` is where those numbers come from.
  */
-const PLAN: Record<Level, { size: number; block: number }> = {
-  1: { size: 8, block: 0.42 },
-  2: { size: 9, block: 0.38 },
-  3: { size: 9, block: 0.34 },
-  4: { size: 10, block: 0.32 },
-  5: { size: 11, block: 0.34 },
-  6: { size: 11, block: 0.26 },
-};
-
-export const sizeForLevel = (level: Level): number => PLAN[level].size;
-
-/** The shape a level is generated at, for the pack builder. */
-export const planFor = (level: Level): { size: number; block: number } => PLAN[level];
+export function blockFor(size: number, level: Level): number {
+  const forLevel = (6 - level) * 0.03;
+  const forSize = Math.max(0, size - 9) * 0.006;
+  return Math.max(0.2, Math.min(0.52, 0.3 + forLevel + forSize));
+}
 
 /**
  * Where each level starts on the rating scale in `rate()`.
  *
- * Three of these are the rungs of the technique ladder, which is what
- * difficulty in kakuro really is: 18 is where a puzzle stops giving its digits
- * up to combination sums alone, and 36 is where it stops giving them up
- * without dealing combinations out cell by cell. The other three sit *inside*
- * a rung, and split it by how much of the grid put up a fight.
+ * The whole-number boundaries are the rungs of the technique ladder, which is
+ * what difficulty in kakuro really is: 18 is where a puzzle stops giving its
+ * digits up to combination sums alone, and 36 is where it stops giving them up
+ * without dealing combinations out cell by cell. The fractional ones sit
+ * *inside* a rung and split it by how much of the grid put up a fight.
  *
- * They are set from the spread the generator actually produces —
- * `node tools/shapes.ts` reprints it — rather than from round numbers, because
- * a boundary outside the achievable range is a level nothing can reach.
+ * Six levels out of four workable rungs needs those splits. Of the seven
+ * techniques, `unique-combination` is never the hardest thing a grid asks for
+ * and `sum-difference` turns up in roughly one grid in fifty — hunting it
+ * directly found one in six tries at 9x9 and none at all at 14x14 — so neither
+ * can carry a level of its own. The two abundant rungs are split instead, at
+ * the median effort share measured by `node tools/effort.ts`.
+ *
+ * Every edge is inside the achievable range, because a boundary outside it is
+ * a level nothing can reach. That is not hypothetical: these were briefly set
+ * from a rating that counted board size, and once size moved out to its own
+ * axis every one of them landed in the wrong place.
  */
-export const BANDS: number[] = [0, 15, 18, 21.8, 36, 40.6];
+export const BANDS: number[] = [0, 14.6, 18, 21, 30, 39];
 
 export function classify(rating: number): Level {
   let level: Level = 1;
@@ -62,7 +69,10 @@ export function classify(rating: number): Level {
 /** The middle of a level's band — what the search steers towards. */
 function target(level: Level): number {
   const low = BANDS[level - 1];
-  const high = level === 6 ? BANDS[5] + 6 : BANDS[level];
+  // Nothing rates far above the top band, so aiming at BANDS[5] + 6 would be
+  // aiming past the end of the scale and flattening the gradient that gets
+  // there. A shade over the edge is enough.
+  const high = level === 6 ? BANDS[5] + 1.5 : BANDS[level];
   return (low + high) / 2;
 }
 
@@ -141,7 +151,7 @@ function judge(size: number, values: number[], wanted: number): Verdict {
   }
 
   const white = values.reduce((n, digit) => n + (digit ? 1 : 0), 0);
-  const rating = rate(result, white, size);
+  const rating = rate(result, white);
   const blame: number[] = [];
   for (let cell = 0; cell < values.length; cell++) if (values[cell]) blame.push(cell);
   return { cost: Math.abs(rating - wanted), rating, level: classify(rating), blame, shake: 0.12 };
@@ -218,15 +228,16 @@ function refine(
  * without a single guess. Kakuro that has to be guessed at is not harder, it
  * is worse, so those are thrown away rather than filed at level 6.
  */
-export function generatePuzzle(level: Level, number: number): Puzzle {
-  const plan = PLAN[level];
-  const rnd = mulberry32(seedFor(level, number));
+export function generatePuzzle(id: { size: Size; level: Level; number: number }): Puzzle {
+  const { size, level, number } = id;
+  const base = blockFor(size, level);
+  const rnd = mulberry32(seedFor(size, level, number));
 
   let fallback: { values: number[]; rating: number } | null = null;
 
   for (let restart = 0; restart < 12; restart++) {
-    const ratio = Math.max(0.16, Math.min(0.46, plan.block + (rnd() - 0.5) * 0.06));
-    const layout = makeLayout(plan.size, ratio, rnd);
+    const ratio = Math.max(0.18, Math.min(0.54, base + (rnd() - 0.5) * 0.06));
+    const layout = makeLayout(size, ratio, rnd);
     if (!layout) continue;
 
     const fill = makeFiller(layout);
@@ -237,12 +248,7 @@ export function generatePuzzle(level: Level, number: number): Puzzle {
     if (!found) continue;
 
     if (classify(found.rating) === level) {
-      return {
-        ...build(plan.size, found.values),
-        difficulty: level,
-        seed: number,
-        rating: found.rating,
-      };
+      return { ...build(size, found.values), difficulty: level, seed: number, rating: found.rating };
     }
     // A real puzzle at the wrong level still beats no puzzle at all — but the
     // stars must match the grid, not the number that was asked for.
@@ -252,9 +258,9 @@ export function generatePuzzle(level: Level, number: number): Puzzle {
     }
   }
 
-  if (!fallback) throw new Error(`could not generate a level ${level} puzzle`);
+  if (!fallback) throw new Error(`could not generate a level ${level} puzzle at ${size}x${size}`);
   return {
-    ...build(plan.size, fallback.values),
+    ...build(size, fallback.values),
     difficulty: classify(fallback.rating),
     seed: number,
     rating: fallback.rating,

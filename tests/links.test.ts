@@ -4,11 +4,12 @@ import { decodePuzzle } from '../src/core/encode.ts';
 import { GENERATOR_VERSION } from '../src/core/generator.ts';
 import { Game } from '../src/game/state.ts';
 import { parsePuzzleLink, puzzleLink, recordFinish, saveFitsPuzzle } from '../src/game/storage.ts';
+import { formatPuzzleId } from '../src/core/types.ts';
 import type { Puzzle, PuzzleId } from '../src/core/types.ts';
 
 const puzzle: Puzzle = decodePuzzle('4|0000089009700000', 1, 1);
-const classic: PuzzleId = { level: 1, number: 1, source: 'classic' };
-const generated: PuzzleId = { level: 3, number: 10, source: 'new' };
+const classic: PuzzleId = { size: 9, level: 1, number: 1, source: 'classic' };
+const generated: PuzzleId = { size: 12, level: 3, number: 10, source: 'new' };
 
 test('classic links are the puzzle id and nothing else', () => {
   const href = puzzleLink(classic, 'https://dandoku.com/kakuro/');
@@ -23,9 +24,9 @@ test('new links carry the generator that made them', () => {
 });
 
 test('a new link from another generator is stale', () => {
-  const href = 'https://dandoku.com/kakuro/?p=3-N10&g=0';
+  const href = 'https://dandoku.com/kakuro/?p=12-3-N10&g=0';
   assert.deepEqual(parsePuzzleLink(href, 1), { ok: false, reason: 'stale-generator' });
-  const legacy = parsePuzzleLink('https://dandoku.com/kakuro/?p=3-N10', 1);
+  const legacy = parsePuzzleLink('https://dandoku.com/kakuro/?p=12-3-N10', 1);
   assert.deepEqual(legacy, { ok: true, id: generated });
 });
 
@@ -82,12 +83,15 @@ test('check flags travel with the save', () => {
 });
 
 test('replay stats keep the hints from the best time, not a running total', () => {
+  // Keyed through formatPuzzleId rather than a literal: the key gained a size
+  // when boards became a choice, and a hard-coded one would only say so here.
+  const key = formatPuzzleId(classic);
   const first = recordFinish({}, classic, 12_000, 2, 1);
   const slower = recordFinish(first, classic, 20_000, 9, 9);
-  assert.equal(slower['1-1'].hints, 2);
-  assert.equal(slower['1-1'].checks, 1);
-  assert.equal(slower['1-1'].bestMs, 12_000);
+  assert.equal(slower[key].hints, 2);
+  assert.equal(slower[key].checks, 1);
+  assert.equal(slower[key].bestMs, 12_000);
   const faster = recordFinish(first, classic, 8_000, 0, 0);
-  assert.equal(faster['1-1'].hints, 0);
-  assert.equal(faster['1-1'].bestMs, 8_000);
+  assert.equal(faster[key].hints, 0);
+  assert.equal(faster[key].bestMs, 8_000);
 });

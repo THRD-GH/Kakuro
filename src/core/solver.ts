@@ -883,26 +883,27 @@ export class Solver {
  * The effort term earns its keep. There are only five techniques in the ladder
  * that a generated grid ever really tops out on, and two of those turn up in
  * about one grid in fifty, which is no way to fill six levels. Within one
- * technique, though, the spread is real: a 9x9 that gives up its digits in
- * thirty deductions and an 11x11 that takes seventy are not the same sitting
- * even though the same reasoning cracks both. So each rung splits in two, and
- * board size counts a little towards the harder half.
+ * technique, though, the spread is real: a grid that gives up its digits in
+ * thirty deductions and one that takes seventy are not the same sitting even
+ * though the same reasoning cracks both. So each rung splits in two.
+ *
+ * Board size is deliberately *not* in here. Size is the player's own choice,
+ * sitting beside the level rather than inside it, and a 20x20 is a longer
+ * afternoon than a 9x9 rather than a harder one. While size did count, every
+ * big board came out at the top of the ladder whatever it actually asked of
+ * you — a 20x20 that fell to plain combination sums was being filed as level
+ * 6. Effort is a *share* of the grid for the same reason: a bigger board takes
+ * proportionally more deductions, and counting them raw would let size back in
+ * through the side door.
  *
  * A puzzle the ladder cannot finish scores 100, off the top of `classify()`:
  * the generator throws those away rather than ship a grid that has to be
  * guessed at.
  */
-export function rate(result: GrindResult, whiteCells: number, size: number): number {
+export function rate(result: GrindResult, whiteCells: number): number {
   if (!result.solved) return 100;
   const hardest = result.hardest ? TECHNIQUE_WEIGHT[result.hardest] : 1;
-  const effort = result.effort;
-  /*
-   * Board size counts here, a little. Two puzzles that both come down to the
-   * combination union are not the same sitting when one is 8x8 and the other
-   * 11x11, and with the technique tiers six points apart there is room to say
-   * so without letting a long easy grid pass for a hard one.
-   */
-  const work = (effort / Math.max(1, whiteCells)) * 4 + Math.max(0, size - 8) * 0.6;
+  const work = (result.effort / Math.max(1, whiteCells)) * 4;
   return hardest * 6 + Math.max(0, Math.min(5.9, work));
 }
 

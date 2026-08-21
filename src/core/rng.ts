@@ -28,12 +28,12 @@ export function randomSeed(): number {
 }
 
 /**
- * A puzzle number and a level name one seed, so puzzle 27 of level 4 is the
- * same grid on every device, forever. Mixed rather than concatenated so
- * neighbouring numbers do not produce neighbouring grids.
+ * A size, a level and a number name one seed, so puzzle 27 of level 4 on a 12
+ * is the same grid on every device, forever. Mixed rather than concatenated so
+ * that neighbouring numbers do not produce neighbouring grids.
  */
-export function seedFor(level: number, number: number): number {
-  let h = Math.imul(level * 0x9e3779b1 + number, 0x85ebca6b) >>> 0;
+export function seedFor(size: number, level: number, number: number): number {
+  let h = Math.imul(size * 0x27d4eb2d + level * 0x9e3779b1 + number, 0x85ebca6b) >>> 0;
   h ^= h >>> 13;
   h = Math.imul(h, 0xc2b2ae35) >>> 0;
   return (h ^ (h >>> 16)) >>> 0;

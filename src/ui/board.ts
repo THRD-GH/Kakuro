@@ -91,7 +91,15 @@ export class Board {
   select(cell: number): void {
     this.selected = cell;
     this.paint();
-    this.cells[cell]?.focus({ preventScroll: true });
+    const node = this.cells[cell];
+    if (!node) return;
+    node.focus({ preventScroll: true });
+    /*
+     * Zoomed, the board is larger than its pane, so the cursor can walk off the
+     * edge of what is on screen. `nearest` scrolls only when it has to, which
+     * keeps the board still while the cursor moves about the middle of it.
+     */
+    node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   get selection(): number {

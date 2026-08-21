@@ -1,18 +1,41 @@
-import { generatePuzzle, classify } from '../src/core/generator.ts';
+/**
+ * Does the generator deliver what it was asked for?
+ *
+ *   node tools/level-check.ts [size] [per-level]
+ *
+ * Every puzzle it makes should be unique, finishable by technique alone, and
+ * at the level it was asked for. The first two are promises the game makes to
+ * the player; the third is one it makes to the ladder.
+ */
+import { classify, generatePuzzle } from '../src/core/generator.ts';
 import { Solver, countSolutions } from '../src/core/solver.ts';
-const levels = process.argv[2] ? [Number(process.argv[2])] : [1,2,3,4,5,6];
-const n = Number(process.argv[3] ?? 5);
-for (const level of levels) {
-  const t0 = Date.now();
-  const got = [];
-  for (let i = 1; i <= n; i++) {
-    const p = generatePuzzle(level, i);
-    const unique = countSolutions(p, 2) === 1;
-    const r = new Solver(p).grind();
-    got.push({ rating: p.rating.toFixed(1), lvl: classify(p.rating), unique, solved: r.solved, hardest: r.hardest, effort: r.effort });
+import { LEVELS, isSize } from '../src/core/types.ts';
+import type { Level } from '../src/core/types.ts';
+
+const size = Number(process.argv[2] ?? 9);
+if (!isSize(size)) throw new Error(`${size} is not a board on offer`);
+const per = Number(process.argv[3] ?? 5);
+
+for (const level of LEVELS as Level[]) {
+  const started = Date.now();
+  const rows: string[] = [];
+  let onBand = 0;
+  let unique = 0;
+  let solvable = 0;
+
+  for (let number = 1; number <= per; number++) {
+    const puzzle = generatePuzzle({ size, level, number });
+    const ground = new Solver(puzzle).grind();
+    const measured = classify(puzzle.rating);
+    if (measured === level) onBand++;
+    if (countSolutions(puzzle, 2) === 1) unique++;
+    if (ground.solved) solvable++;
+    rows.push(`${puzzle.rating.toFixed(1)}(L${measured},${ground.hardest ?? '-'})`);
   }
-  const ms = ((Date.now() - t0) / n).toFixed(0);
-  const hit = got.filter(g => g.lvl === level).length;
-  console.log(`L${level}: ${hit}/${n} on band, ${got.filter(g=>g.unique).length}/${n} unique, ${got.filter(g=>g.solved).length}/${n} logic-solvable, ${ms}ms each`);
-  console.log('   ' + got.map(g => `${g.rating}(L${g.lvl},${g.hardest ?? '-'},${g.effort})`).join(' '));
+
+  console.log(
+    `${size}x${size} L${level}: ${onBand}/${per} on band, ${unique}/${per} unique, ` +
+      `${solvable}/${per} logic-solvable, ${Math.round((Date.now() - started) / per)}ms each`,
+  );
+  console.log('   ' + rows.join(' '));
 }

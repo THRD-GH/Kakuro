@@ -13,18 +13,18 @@ import { join } from 'node:path';
 import { decodePuzzle } from '../src/core/encode.ts';
 import { classify } from '../src/core/generator.ts';
 import { Solver, countSolutions, rate } from '../src/core/solver.ts';
-import { LEVELS } from '../src/core/types.ts';
+import { LEVELS, SIZES } from '../src/core/types.ts';
 
 const packs = join(process.cwd(), 'public', 'packs');
 let checked = 0;
 const problems: string[] = [];
 
-for (const level of LEVELS) {
+for (const size of SIZES) {
+ for (const level of LEVELS) {
   let records: string[];
   try {
-    records = JSON.parse(readFileSync(join(packs, `level-${level}.json`), 'utf8')) as string[];
+    records = JSON.parse(readFileSync(join(packs, `${size}-${level}.json`), 'utf8')) as string[];
   } catch {
-    console.log(`level ${level}: no pack`);
     continue;
   }
 
@@ -34,36 +34,41 @@ for (const level of LEVELS) {
     const number = i + 1;
     const puzzle = decodePuzzle(records[i], level, number);
     checked++;
+    if (puzzle.size !== size) {
+      problems.push(`${size}-${level}-${number}: filed under ${size} but is a ${puzzle.size}`);
+      continue;
+    }
 
     if (puzzle.runs.some((run) => run.cells.length < 2 || run.cells.length > 9)) {
-      problems.push(`${level}-${number}: a run is not between two and nine cells`);
+      problems.push(`${size}-${level}-${number}: a run is not between two and nine cells`);
       continue;
     }
 
     const ground = new Solver(puzzle).grind();
     if (!ground.solved) {
-      problems.push(`${level}-${number}: the technique ladder cannot finish it`);
+      problems.push(`${size}-${level}-${number}: the technique ladder cannot finish it`);
       continue;
     }
     if (ground.values.some((digit, cell) => digit !== puzzle.solution[cell])) {
-      problems.push(`${level}-${number}: the ladder reaches a different answer`);
+      problems.push(`${size}-${level}-${number}: the ladder reaches a different answer`);
       continue;
     }
 
     const count = countSolutions(puzzle, 2);
-    if (count !== 1) problems.push(`${level}-${number}: ${count} answers, not one`);
+    if (count !== 1) problems.push(`${size}-${level}-${number}: ${count} answers, not one`);
 
     const white = puzzle.solution.filter((digit) => digit > 0).length;
-    if (classify(rate(ground, white, puzzle.size)) !== level) misfiled.push(number);
+    if (classify(rate(ground, white)) !== level) misfiled.push(number);
   }
 
   console.log(
-    `level ${level}: ${records.length} puzzles, ${((Date.now() - started) / 1000).toFixed(1)}s` +
+    `${size}x${size} level ${level}: ${records.length} puzzles, ${((Date.now() - started) / 1000).toFixed(1)}s` +
       (misfiled.length > 0 ? `, ${misfiled.length} filed under the wrong level` : ''),
   );
   if (misfiled.length > 0) {
-    problems.push(`level ${level}: ${misfiled.length} puzzles measure at a different level`);
+    problems.push(`${size}x${size} level ${level}: ${misfiled.length} puzzles measure at a different level`);
   }
+ }
 }
 
 if (problems.length > 0) {

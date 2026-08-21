@@ -1,7 +1,7 @@
-import { sizeForLevel } from '../core/generator.ts';
-import { LEVELS, SOURCES, displayPuzzleId, sourceLabel } from '../core/types.ts';
-import type { Level, Source } from '../core/types.ts';
-import { historyKey, unfinishedSaves } from '../game/storage.ts';
+import { SIZES, SIZE_LABELS, SOURCES, displayPuzzleId, sourceLabel } from '../core/types.ts';
+import type { Level, Size, Source } from '../core/types.ts';
+import { LEVELS } from '../core/types.ts';
+import { finishedCount, unfinishedSaves } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
 import { buildStamp, el, timeAgo } from './dom.ts';
 
@@ -12,7 +12,7 @@ import { buildStamp, el, timeAgo } from './dom.ts';
  */
 const LEVEL_NOTES: Record<Level, string> = {
   1: 'Clues that can be written only one way — 17 in two cells is 8 and 9.',
-  2: 'Reading several combinations together to rule digits out.',
+  2: 'The same, over more of the grid before it gives.',
   3: 'A digit every combination needs, with one cell left that can hold it.',
   4: 'Combinations that add up but cannot be written in.',
   5: 'Dealing combinations out across a run, cell by cell.',
@@ -44,7 +44,12 @@ export function buildMenu(app: AppContext, source: Source, onSource: (next: Sour
     el(
       'header',
       { class: 'menu-bar' },
-      el('h1', { class: 'wordmark' }, el('span', { class: 'word-a', text: 'Ka' }), el('span', { class: 'word-b', text: 'kuro' })),
+      el(
+        'h1',
+        { class: 'wordmark' },
+        el('span', { class: 'word-a', text: 'Ka' }),
+        el('span', { class: 'word-b', text: 'kuro' }),
+      ),
       el('div', { class: 'menu-bar-actions' }, help, settings),
     ),
   );
@@ -59,13 +64,16 @@ export function buildMenu(app: AppContext, source: Source, onSource: (next: Sour
         'button',
         { class: 'resume', type: 'button' },
         el('b', { text: displayPuzzleId(save.id) }),
-        el('span', { text: `${filled} of ${total} filled · ${timeAgo(save.savedAt ?? Date.now())}` }),
+        el('i', { class: 'resume-size', text: `${save.id.size}×${save.id.size}` }),
+        el('span', { text: `${filled} of ${total} · ${timeAgo(save.savedAt ?? Date.now())}` }),
       );
       button.addEventListener('click', () => app.playPuzzle(save.id));
       list.append(button);
     }
     node.append(el('section', { class: 'resume-wrap' }, el('h2', { text: 'Carry on' }), list));
   }
+
+  node.append(buildSizePicker(app));
 
   const tabs = el('div', { class: 'source-tabs', role: 'tablist' });
   for (const option of SOURCES) {
@@ -80,22 +88,17 @@ export function buildMenu(app: AppContext, source: Source, onSource: (next: Sour
     tabs.append(tab);
   }
 
-  const packCounts = app.packCounts;
+  const installed = app.packCounts !== null;
   node.append(
     el(
       'section',
       { class: 'levels' },
-      el(
-        'div',
-        { class: 'levels-head' },
-        el('h2', { text: 'Choose a level' }),
-        tabs,
-      ),
+      el('div', { class: 'levels-head' }, el('h2', { text: 'Choose a level' }), tabs),
       el('p', {
         class: 'levels-note',
         text:
           source === 'classic'
-            ? packCounts
+            ? installed
               ? 'The shipped collection. Every puzzle is numbered, so a level is somewhere you can come back to.'
               : 'No puzzle packs are installed in this build — New generates them instead.'
             : 'Generated on this device, and endless. Every number is the same grid on every device.',
@@ -108,14 +111,43 @@ export function buildMenu(app: AppContext, source: Source, onSource: (next: Sour
   return node;
 }
 
+/**
+ * The board picker. Size sits above the levels rather than inside them,
+ * because it is a different question: how long do you want to be here, not how
+ * hard do you want it to be.
+ */
+function buildSizePicker(app: AppContext): HTMLElement {
+  const row = el('div', { class: 'size-row', role: 'radiogroup', 'aria-label': 'Board size' });
+  for (const size of SIZES) {
+    const chosen = size === app.size;
+    const button = el(
+      'button',
+      {
+        class: `size-choice${chosen ? ' on' : ''}`,
+        type: 'button',
+        role: 'radio',
+        'aria-checked': String(chosen),
+      },
+      el('i', { class: `size-glyph size-${size}`, 'aria-hidden': 'true' }),
+      el('b', { text: SIZE_LABELS[size] }),
+      el('span', { text: `${size}×${size}` }),
+    );
+    button.addEventListener('click', () => app.setSize(size));
+    row.append(button);
+  }
+  return el(
+    'section',
+    { class: 'sizes' },
+    el('h2', { text: 'Choose a board' }),
+    row,
+  );
+}
+
 function levelRow(app: AppContext, level: Level, source: Source): HTMLElement {
   const belt = BELTS[level - 1];
-  const pool = source === 'classic' ? (app.packCounts?.[level] ?? 0) : app.newPoolSize;
-
-  let finished = 0;
-  for (let number = 1; number <= pool; number++) {
-    if (app.history[historyKey({ level, number, source })]?.finished) finished++;
-  }
+  const size: Size = app.size;
+  const pool = source === 'classic' ? (app.packCounts?.[size]?.[level] ?? 0) : app.newPoolSize;
+  const done = finishedCount(app.history, { size, level, source }, pool);
 
   const row = el('button', {
     class: `level-row${pool === 0 ? ' empty' : ''}`,
@@ -134,12 +166,7 @@ function levelRow(app: AppContext, level: Level, source: Source): HTMLElement {
       'span',
       { class: 'level-meta' },
       el('b', { text: `${'★'.repeat(level)}${'☆'.repeat(6 - level)}` }),
-      el('span', {
-        text:
-          pool === 0
-            ? 'no puzzles'
-            : `${sizeForLevel(level)}×${sizeForLevel(level)} · ${finished} of ${pool} done`,
-      }),
+      el('span', { text: pool === 0 ? 'none yet' : `${done} of ${pool}` }),
     ),
   );
   row.addEventListener('click', () => app.playRandom(level, source));

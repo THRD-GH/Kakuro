@@ -11,7 +11,7 @@
     "icons": "node tools/make-icons.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/solver.test.ts tests/encode.test.ts tests/links.test.ts"
+    "test": "node --test \"tests/**/*.test.ts\""
   },
   "devDependencies": {
     "typescript": "^7.0.2",

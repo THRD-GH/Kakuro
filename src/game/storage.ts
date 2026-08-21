@@ -1,6 +1,6 @@
 import { GENERATOR_VERSION } from '../core/generator.ts';
-import type { Level, Puzzle, PuzzleId, Source } from '../core/types.ts';
-import { formatPuzzleId } from '../core/types.ts';
+import type { Puzzle, PuzzleId, Size } from '../core/types.ts';
+import { formatPuzzleId, isSize, parsePuzzleId } from '../core/types.ts';
 
 /*
  * Everything this game keeps is under `kk:v1:`. The DanDoku games share one
@@ -28,6 +28,8 @@ export type Theme = 'night' | 'day' | 'contrast';
 
 export interface Settings {
   theme: Theme;
+  /** The board last chosen on the menu, so it is still there next time. */
+  size: Size;
   /** Tint the across and down runs through the selected cell. */
   highlightRuns: boolean;
   /** Tint other cells holding the same digit. */
@@ -49,6 +51,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'day',
+  size: 12,
   highlightRuns: true,
   highlightSameDigit: true,
   autoRemoveMarks: true,
@@ -106,7 +109,11 @@ function write(key: string, value: unknown): void {
 // ------------------------------------------------------------------ settings
 
 export function loadSettings(): Settings {
-  return { ...DEFAULT_SETTINGS, ...read<Partial<Settings>>(KEY.settings, {}) };
+  const stored = { ...DEFAULT_SETTINGS, ...read<Partial<Settings>>(KEY.settings, {}) };
+  // A board that is no longer offered would leave the menu with nothing
+  // selected and the level rows counting a pool that does not exist.
+  if (!isSize(stored.size)) stored.size = DEFAULT_SETTINGS.size;
+  return stored;
 }
 
 export function saveSettings(settings: Settings): void {
@@ -162,14 +169,26 @@ export function recordFinish(
   return next;
 }
 
-/** Puzzle numbers at this level that have never been finished. */
-export function unplayedNumbers(history: History, level: Level, source: Source, pool: number): number[] {
+/** Puzzle numbers of this size and level that have never been finished. */
+export function unplayedNumbers(
+  history: History,
+  id: Omit<PuzzleId, 'number'>,
+  pool: number,
+): number[] {
   const out: number[] = [];
   for (let number = 1; number <= pool; number++) {
-    const entry = history[historyKey({ level, number, source })];
-    if (!entry?.finished) out.push(number);
+    if (!history[historyKey({ ...id, number })]?.finished) out.push(number);
   }
   return out;
+}
+
+/** How many of a size and level's puzzles have been finished. */
+export function finishedCount(history: History, id: Omit<PuzzleId, 'number'>, pool: number): number {
+  let done = 0;
+  for (let number = 1; number <= pool; number++) {
+    if (history[historyKey({ ...id, number })]?.finished) done++;
+  }
+  return done;
 }
 
 // --------------------------------------------------------------------- saves
@@ -315,13 +334,8 @@ export function parsePuzzleLink(href: string, generation = GENERATOR_VERSION): P
   const url = new URL(href, 'https://dandoku.com/kakuro/');
   const raw = url.searchParams.get('p');
   if (!raw) return null;
-  const match = /^([1-6])-(N?)(\d+)$/.exec(raw.trim());
-  if (!match) return null;
-  const id: PuzzleId = {
-    level: Number(match[1]) as Level,
-    source: match[2] ? 'new' : 'classic',
-    number: Number(match[3]),
-  };
+  const id = parsePuzzleId(raw);
+  if (!id) return null;
   if (id.source === 'new') {
     const rawGeneration = url.searchParams.get('g');
     const madeBy = rawGeneration === null ? 1 : Number(rawGeneration);

@@ -7,6 +7,7 @@ import { Game } from '../game/state.ts';
 import type { SavedGame } from '../game/storage.ts';
 import { dropSave, puzzleLink, putSave, recordFinish, recordStart, saveSettings } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
+import { pauseIcon, playIcon, redoIcon, undoIcon, zoomIcon } from './icons.ts';
 import { Board } from './board.ts';
 import { CombosBar } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
@@ -66,7 +67,7 @@ export class PlayScreen {
      * of players start a hard grid.
      */
     this.marksButton = el('button', {
-      class: 'key act',
+      class: 'key aid',
       type: 'button',
       title: 'Pencil in every candidate the clues still allow',
       text: 'Marks',
@@ -74,20 +75,20 @@ export class PlayScreen {
     this.marksButton.addEventListener('click', () => this.fillMarks());
 
     this.undoButton = el('button', {
-      class: 'key act glyph',
+      class: 'key edit glyph',
       type: 'button',
       'aria-label': 'Undo',
       title: 'Undo',
-      text: '↶',
     });
+    this.undoButton.append(undoIcon());
     this.undoButton.addEventListener('click', () => this.undo());
     this.redoButton = el('button', {
-      class: 'key act glyph',
+      class: 'key edit glyph',
       type: 'button',
       'aria-label': 'Redo',
       title: 'Redo',
-      text: '↷',
     });
+    this.redoButton.append(redoIcon());
     this.redoButton.addEventListener('click', () => this.redo());
 
     this.node = el(
@@ -200,12 +201,19 @@ export class PlayScreen {
   }
 
   /*
-   * One control block, laid out as Killer Sudoku lays its own out: the digits
-   * as a three-by-three pad on one side and the buttons as a matching
-   * three-by-three on the other. Nine and nine, the same size and the same
-   * rhythm, rather than a pad with an odd column of extras bolted to it — that
-   * arrangement was what let four stacked buttons set the height of three rows
-   * of digits and inflate the whole thing.
+   * The control block, laid out the way the sudoku games lay theirs out.
+   *
+   * Two matching three-by-threes was tidy on paper and wrong in the hand: it
+   * made nine buttons that are pressed occasionally exactly as large as nine
+   * that are pressed constantly, which cost the digits their size and left
+   * the labels at twelve pixels in a fifty-pixel box.
+   *
+   * So the digits keep a block of their own, Clear and the undo pair run
+   * across the foot of it — Clear is the most-used key after the digits and
+   * now has the widest target on the board — and what is left goes beside the
+   * pad, two abreast, grouped by column: the solving aids in one, the session
+   * buttons in the other. Four colours say which group a key is in before the
+   * label is read.
    */
   private controls(): HTMLElement {
     const pad = el('div', { class: 'keypad' });
@@ -223,20 +231,20 @@ export class PlayScreen {
       pad.append(key);
     }
 
-    const erase = el('button', { class: 'key act', type: 'button', text: 'Clear' });
+    const erase = el('button', { class: 'key edit wide', type: 'button', text: 'Clear' });
     if (this.app.settings.clearNeedsHold) bindTap(erase, { onHold: () => this.eraseCell() });
     else bindTap(erase, { onTap: () => this.eraseCell() });
 
-    const check = el('button', { class: 'key act', type: 'button', text: 'Check' });
+    const check = el('button', { class: 'key aid', type: 'button', text: 'Check' });
     if (this.app.settings.checkNeedsHold) bindTap(check, { onHold: () => this.check() });
     else bindTap(check, { onTap: () => this.check() });
 
-    const hint = el('button', { class: 'key act', type: 'button', text: 'Hint' });
+    const hint = el('button', { class: 'key aid', type: 'button', text: 'Hint' });
     if (this.app.settings.hintNeedsHold) bindTap(hint, { onHold: () => this.hint() });
     else bindTap(hint, { onTap: () => this.hint() });
 
     this.tableButton = el('button', {
-      class: 'key act',
+      class: 'key session',
       type: 'button',
       'aria-pressed': 'false',
       text: 'Table',
@@ -246,48 +254,39 @@ export class PlayScreen {
       saveSettings(this.app.settings);
       this.applyCombosSetting();
     });
-    const table = this.tableButton;
 
     this.zoomButton = el('button', {
-      class: 'key act glyph',
+      class: 'key session glyph',
       type: 'button',
       'aria-pressed': 'false',
       'aria-label': 'Zoom',
       title: 'Zoom',
-      text: '⤢',
     });
+    this.zoomButton.append(zoomIcon());
     this.zoomButton.addEventListener('click', () => this.setZoom(!this.zoomed));
 
     this.pauseButton = el('button', {
-      class: 'key act glyph',
+      class: 'key session glyph',
       type: 'button',
       'aria-pressed': 'false',
       'aria-label': 'Pause',
       title: 'Pause',
-      text: '⏸',
     });
+    this.pauseButton.append(pauseIcon());
     this.pauseButton.addEventListener('click', () => this.setPaused(!this.paused));
 
     return el(
       'div',
       { class: 'controls' },
-      el('div', { class: 'controls-left' }, pad),
+      pad,
+      // Column order: the grid flows down each column, so these are the aids
+      // and then the session keys, not three rows of two.
+      el('div', { class: 'actions' }, this.marksButton, check, hint, this.tableButton, this.zoomButton, this.pauseButton),
       el(
         'div',
-        { class: 'controls-right' },
-        el(
-          'div',
-          { class: 'actions' },
-          this.marksButton,
-          erase,
-          check,
-          hint,
-          table,
-          this.undoButton,
-          this.redoButton,
-          this.zoomButton,
-          this.pauseButton,
-        ),
+        { class: 'under-keys' },
+        erase,
+        el('div', { class: 'undo-pair' }, this.undoButton, this.redoButton),
       ),
     );
   }
@@ -312,7 +311,8 @@ export class PlayScreen {
     this.paused = on;
     this.pauseButton.setAttribute('aria-pressed', String(on));
     this.pauseButton.classList.toggle('on', on);
-    this.pauseButton.textContent = on ? '▶' : '⏸';
+    clear(this.pauseButton);
+    this.pauseButton.append(on ? playIcon() : pauseIcon());
     this.pauseButton.setAttribute('aria-label', on ? 'Resume' : 'Pause');
     this.node.querySelector('.board-area')?.classList.toggle('paused', on);
     if (on) this.game.pause();

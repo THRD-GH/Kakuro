@@ -39,6 +39,11 @@
   --k-face: #fffdf8;
   --k-face-line: #cdc3b1;
   --k-edit: #ece5d6;
+  --k-edit-line: #cdc3b1;
+  --k-aid: #dfe6ec;
+  --k-aid-line: #b3c1cd;
+  --k-session: #e6e2da;
+  --k-session-line: #c6bdad;
 }
 
 /* Night: the same printed board, read by lamplight. */
@@ -68,6 +73,11 @@
   --k-face: #232019;
   --k-face-line: #4a4236;
   --k-edit: #1e1b16;
+  --k-edit-line: #4a4236;
+  --k-aid: #1a1f25;
+  --k-aid-line: #384450;
+  --k-session: #201d18;
+  --k-session-line: #423b31;
 }
 
 /*
@@ -101,6 +111,11 @@
   --k-face: #000000;
   --k-face-line: #ffffff;
   --k-edit: #000000;
+  --k-edit-line: #ffffff;
+  --k-aid: #000000;
+  --k-aid-line: #ffffff;
+  --k-session: #000000;
+  --k-session-line: #ffffff;
 }
 
 * {
@@ -896,25 +911,77 @@ p {
 /* ------------------------------------------------------------- the controls */
 
 /*
- * Digits on one side, buttons on the other, both as a three-by-three of the
- * same size. The previous arrangement hung a column of four extras off the
- * pad, and four stacked buttons against three rows of digits set the height of
- * the whole block — a 44px key came out 64px and the controls took a quarter
- * of the screen.
+ * Laid out the way the sudoku games lay theirs out.
+ *
+ * Two matching three-by-threes made nine buttons that are pressed
+ * occasionally exactly as large as nine that are pressed constantly: the
+ * digits came out 59x44 — wider than they are tall, which no phone keypad is
+ * — and the labels beside them sat at twelve pixels in a fifty-pixel box.
+ *
+ * The digits keep a block of their own. Clear and the undo pair run across
+ * its foot, so the key used most after the digits has the widest target on
+ * the board. What is left goes beside the pad, two abreast and grouped by
+ * column.
  */
 .controls {
   flex: 0 0 auto;
   display: grid;
-  /* The digits are pressed more than everything else put together, so they
-     get the wider half. */
-  grid-template-columns: 1.2fr 1fr;
-  gap: 0.5rem;
+  /*
+   * The digits want to be square, which fixes their column. Everything else
+   * takes what is left — which is what lets a label sit at a readable size
+   * instead of at twelve pixels in a fifty-pixel box.
+   */
+  grid-template-columns: 1fr 1.25fr;
+  gap: 0.45rem;
 }
 
-.keypad,
-.actions {
+.keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  gap: 0.3rem;
+}
+
+/*
+ * The editing keys run under both columns rather than under the digits
+ * alone. Tucked under the pad they gave the left column a fourth row against
+ * the right column's three, and grid being grid, that made the keys pressed
+ * least the tallest things on the screen: 85x60 against a 53x44 digit.
+ * Across the foot, every key in the block is one row high.
+ */
+.under-keys {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+/* Clear is the key used most after the digits, so it takes two thirds. */
+.under-keys > .key {
+  flex: 2 1 0;
+  min-width: 0;
+}
+
+.under-keys > .undo-pair {
+  flex: 1 1 0;
+}
+
+.undo-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+/*
+ * Beside the digits, filling the same height: the solving aids down one
+ * column and the session buttons down the other. Column flow is what makes
+ * that a grouping rather than three unrelated pairs.
+ */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, 1fr);
+  grid-auto-flow: column;
   gap: 0.3rem;
 }
 
@@ -922,30 +989,61 @@ p {
   /* A tap target you can hit without looking: 44px is the floor. The ceiling
      matters just as much — every pixel these take is one off the board. */
   min-height: 2.75rem;
-  max-height: 3.1rem;
   padding: 0.25rem 0;
   border-radius: 0.6rem;
+  display: grid;
+  place-items: center;
 }
 
 .key.digit {
-  font-size: 1.4rem;
+  font-size: 1.45rem;
   font-weight: 500;
   background: var(--k-face);
   border-color: var(--k-face-line);
   font-variant-numeric: tabular-nums;
 }
 
-.key.act {
-  font-size: 0.78rem;
+/*
+ * Four groups, so what a control does is legible before the label is read:
+ * the digits, the keys that edit the cell, the ones that solve for you, and
+ * the ones that are about the session rather than the puzzle.
+ */
+.key.edit {
   background: var(--k-edit);
+  border-color: var(--k-edit-line);
 }
 
-/* Undo, redo, zoom and pause carry a symbol rather than a word: they are the
-   four that are recognised faster as a shape, and it buys the labels beside
-   them room to stay readable. */
-.key.glyph {
-  font-size: 1.15rem;
-  line-height: 1;
+.key.aid {
+  background: var(--k-aid);
+  border-color: var(--k-aid-line);
+}
+
+.key.session {
+  background: var(--k-session);
+  border-color: var(--k-session-line);
+}
+
+.key.edit,
+.key.aid,
+.key.session {
+  font-size: 0.84rem;
+}
+
+.key.wide {
+  letter-spacing: 0.04em;
+}
+
+/* Undo, redo, zoom and pause carry a drawing rather than a word: they are the
+   four recognised faster as a shape, and it buys the labels beside them room
+   to stay readable. */
+.key.glyph svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
+}
+
+.key:disabled {
+  opacity: 0.35;
 }
 
 .key.on {
@@ -1356,12 +1454,15 @@ p {
     grid-row: 2;
   }
 
-  /* Beside the board the two blocks stack rather than sitting side by side:
-     the column is tall and narrow, which suits that far better. */
+  /*
+   * The block keeps its two columns beside the board. Stacking them was right
+   * when it was two three-by-threes, but the digits, the actions and the
+   * editing strip stacked leaves each of them the full width of the column —
+   * a 98x44 digit, which is a letterbox, not a key.
+   */
   .controls {
     grid-column: 2;
     grid-row: 2;
-    grid-template-columns: 1fr;
     align-self: start;
   }
 }
@@ -1404,7 +1505,6 @@ p {
 
   .key {
     min-height: 2.4rem;
-    max-height: 2.8rem;
   }
 
   .key.digit {

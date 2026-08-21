@@ -44,6 +44,32 @@ clears, `M` fills the marks, `Z` undoes, `Y` redoes. When Check, Hint or Clear
 is set to need a hold, the matching keys are `Shift+C`, `Shift+H` and
 `Shift+Backspace`.
 
+The block itself is laid out as the sudoku games lay theirs out: the digits
+in a pad of their own, Clear and the undo pair across its foot, and the six
+remaining buttons beside the pad, two abreast and grouped by column — the
+solving aids in one, the session buttons in the other. Four colours say which
+group a key belongs to before its label is read.
+
+Two matching three-by-threes came first and was wrong in the hand: it made the
+nine buttons pressed occasionally exactly as large as the nine pressed
+constantly, which cost the digits their size — 59×44, wider than they are
+tall, which no phone keypad is — and left the labels at twelve pixels in a
+fifty-pixel box. Digits are now 48×44 with 13px labels beside them, and Clear,
+the key used most after the digits, has the widest target on the board. The
+editing strip runs under *both* columns rather than under the pad alone,
+because tucked under the pad it gave the left column a fourth row against the
+right column's three, and that made the keys pressed least the tallest things
+on screen.
+
+None of it costs the board anything: on a phone the grid is limited by the
+width of the screen long before its height, so the block grew by 51px into
+space that was already slack.
+
+Undo, redo, zoom and pause are drawn rather than typed. As text glyphs they
+were a gamble on the font — `↶` and `↷` are missing from several UI faces and
+arrive as a box, or at a different weight and baseline from the labels beside
+them, so a row that should read as one set came out ragged.
+
 A mode is the wrong shape for this. It was invisible at the moment it counted:
 you found out which one you were in from what came up in the cell, and by then
 it was a move to undo. Tapping a second digit demoting the answer to two marks

@@ -1,7 +1,7 @@
-import { SIZES, SIZE_LABELS, SOURCES, displayPuzzleId, sourceLabel } from '../core/types.ts';
-import type { Level, Size, Source } from '../core/types.ts';
-import { LEVELS } from '../core/types.ts';
+import { LEVELS, SIZES, SIZE_LABELS, displayPuzzleId } from '../core/types.ts';
+import type { Level, Size } from '../core/types.ts';
 import { finishedCount, unfinishedSaves } from '../game/storage.ts';
+import { openResumePicker } from './resume-picker.ts';
 import type { AppContext } from './app-context.ts';
 import { buildStamp, el, timeAgo } from './dom.ts';
 
@@ -23,16 +23,16 @@ const LEVEL_NOTES: Record<Level, string> = {
  * The belts, as dandoku.com wears them. Six levels across the collection and
  * the same six names, so a brown belt at killer means something at kakuro too.
  */
-export const BELTS: { rank: string; colour: string; note: string }[] = [
-  { rank: '5th Kyū', colour: 'White belt', note: 'Foundations' },
-  { rank: '4th Kyū', colour: 'Yellow belt', note: 'Developing' },
-  { rank: '3rd Kyū', colour: 'Green belt', note: 'Confident' },
-  { rank: '2nd Kyū', colour: 'Blue belt', note: 'Advanced' },
-  { rank: '1st Kyū', colour: 'Brown belt', note: 'Expert' },
-  { rank: '1st Dan', colour: 'Black belt', note: 'Dan challenge' },
+export const BELTS: { rank: string; colour: string }[] = [
+  { rank: '5th Kyū', colour: 'White belt' },
+  { rank: '4th Kyū', colour: 'Yellow belt' },
+  { rank: '3rd Kyū', colour: 'Green belt' },
+  { rank: '2nd Kyū', colour: 'Blue belt' },
+  { rank: '1st Kyū', colour: 'Brown belt' },
+  { rank: '1st Dan', colour: 'Black belt' },
 ];
 
-export function buildMenu(app: AppContext, source: Source, onSource: (next: Source) => void): HTMLElement {
+export function buildMenu(app: AppContext): HTMLElement {
   const node = el('div', { class: 'menu' });
 
   const settings = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Settings' }, '⚙');
@@ -56,54 +56,24 @@ export function buildMenu(app: AppContext, source: Source, onSource: (next: Sour
 
   const parked = unfinishedSaves();
   if (parked.length > 0) {
-    const list = el('div', { class: 'resume-list' });
-    for (const save of parked.slice(0, 4)) {
-      const filled = save.values.filter((digit) => digit > 0).length;
-      const total = save.puzzle.solution.filter((digit) => digit > 0).length;
-      const button = el(
-        'button',
-        { class: 'resume', type: 'button' },
-        el('b', { text: displayPuzzleId(save.id) }),
-        el('i', { class: 'resume-size', text: `${save.id.size}×${save.id.size}` }),
-        el('span', { text: `${filled} of ${total} · ${timeAgo(save.savedAt ?? Date.now())}` }),
-      );
-      button.addEventListener('click', () => app.playPuzzle(save.id));
-      list.append(button);
-    }
-    node.append(el('section', { class: 'resume-wrap' }, el('h2', { text: 'Carry on' }), list));
+    const open = el(
+      'button',
+      { class: 'resume-open', type: 'button' },
+      el('b', { text: `Carry on — ${parked.length} unfinished` }),
+      el('span', { text: `Last: ${displayPuzzleId(parked[0].id)} · ${timeAgo(parked[0].savedAt ?? Date.now())}` }),
+    );
+    open.addEventListener('click', () => openResumePicker(app, () => app.goMenu()));
+    node.append(el('section', { class: 'resume-wrap' }, open));
   }
 
   node.append(buildSizePicker(app));
 
-  const tabs = el('div', { class: 'source-tabs', role: 'tablist' });
-  for (const option of SOURCES) {
-    const tab = el('button', {
-      class: `source-tab${option === source ? ' on' : ''}`,
-      type: 'button',
-      role: 'tab',
-      'aria-selected': String(option === source),
-      text: sourceLabel(option),
-    });
-    tab.addEventListener('click', () => onSource(option));
-    tabs.append(tab);
-  }
-
-  const installed = app.packCounts !== null;
   node.append(
     el(
       'section',
       { class: 'levels' },
-      el('div', { class: 'levels-head' }, el('h2', { text: 'Choose a level' }), tabs),
-      el('p', {
-        class: 'levels-note',
-        text:
-          source === 'classic'
-            ? installed
-              ? 'The shipped collection. Every puzzle is numbered, so a level is somewhere you can come back to.'
-              : 'No puzzle packs are installed in this build — New generates them instead.'
-            : 'Generated on this device, and endless. Every number is the same grid on every device.',
-      }),
-      ...LEVELS.map((level) => levelRow(app, level, source)),
+      el('h2', { text: 'Choose a level' }),
+      ...LEVELS.map((level) => levelRow(app, level)),
     ),
   );
 
@@ -135,25 +105,15 @@ function buildSizePicker(app: AppContext): HTMLElement {
     button.addEventListener('click', () => app.setSize(size));
     row.append(button);
   }
-  return el(
-    'section',
-    { class: 'sizes' },
-    el('h2', { text: 'Choose a board' }),
-    row,
-  );
+  return el('section', { class: 'sizes' }, el('h2', { text: 'Choose a board' }), row);
 }
 
-function levelRow(app: AppContext, level: Level, source: Source): HTMLElement {
+function levelRow(app: AppContext, level: Level): HTMLElement {
   const belt = BELTS[level - 1];
   const size: Size = app.size;
-  const pool = source === 'classic' ? (app.packCounts?.[size]?.[level] ?? 0) : app.newPoolSize;
-  const done = finishedCount(app.history, { size, level, source }, pool);
+  const done = finishedCount(app.history, { size, level }, app.poolSize);
 
-  const row = el('button', {
-    class: `level-row${pool === 0 ? ' empty' : ''}`,
-    type: 'button',
-    disabled: pool === 0,
-  });
+  const row = el('button', { class: 'level-row', type: 'button' });
   row.append(
     el('i', { class: `belt belt-${level - 1}`, 'aria-hidden': 'true' }),
     el(
@@ -166,9 +126,9 @@ function levelRow(app: AppContext, level: Level, source: Source): HTMLElement {
       'span',
       { class: 'level-meta' },
       el('b', { text: `${'★'.repeat(level)}${'☆'.repeat(6 - level)}` }),
-      el('span', { text: pool === 0 ? 'none yet' : `${done} of ${pool}` }),
+      el('span', { text: done > 0 ? `${done} done` : 'unplayed' }),
     ),
   );
-  row.addEventListener('click', () => app.playRandom(level, source));
+  row.addEventListener('click', () => app.playRandom(level));
   return row;
 }

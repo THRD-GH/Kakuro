@@ -54,19 +54,6 @@ export function indexRuns(puzzle: Puzzle): RunIndex {
 export const isClue = (puzzle: Puzzle, cell: number): boolean => puzzle.solution[cell] === 0;
 
 /**
- * Where a puzzle comes from. 'classic' plays the shipped collection, 'new'
- * generates one on the spot. Both are numbered per level and both are
- * reproducible from that number, so the two pools are tracked separately.
- */
-export type Source = 'classic' | 'new';
-
-export const SOURCES: Source[] = ['classic', 'new'];
-
-export const SOURCE_LABELS: Record<Source, string> = { classic: 'Classic', new: 'New' };
-
-export const sourceLabel = (source: Source): string => SOURCE_LABELS[source];
-
-/**
  * The boards on offer, as the full grid dimension — a 12 is eleven cells of
  * answers with a margin of clues along the top and left.
  *
@@ -94,7 +81,6 @@ export interface PuzzleId {
   size: Size;
   level: Level;
   number: number;
-  source: Source;
 }
 
 /**
@@ -105,21 +91,16 @@ export interface PuzzleId {
  * would share a save slot and a history entry and quietly overwrite each other.
  */
 export const formatPuzzleId = (id: PuzzleId): string =>
-  `${id.size}-${id.level}-${id.source === 'new' ? 'N' : ''}${id.number}`;
+  `${id.size}-${id.level}-${id.number}`;
 
-const ID_PATTERN = /^(\d{1,2})-([1-6])-(N?)(\d+)$/;
+const ID_PATTERN = /^(\d{1,2})-([1-6])-(\d+)$/;
 
 export function parsePuzzleId(raw: string): PuzzleId | null {
   const match = ID_PATTERN.exec(raw.trim());
   if (!match) return null;
   const size = Number(match[1]);
   if (!isSize(size)) return null;
-  return {
-    size,
-    level: Number(match[2]) as Level,
-    source: match[3] ? 'new' : 'classic',
-    number: Number(match[4]),
-  };
+  return { size, level: Number(match[2]) as Level, number: Number(match[3]) };
 }
 
 export const samePuzzle = (a: PuzzleId, b: PuzzleId): boolean =>
@@ -130,5 +111,4 @@ export const samePuzzle = (a: PuzzleId, b: PuzzleId): boolean =>
  * on screen beside this in every place the id appears, as `12×12`, and a
  * reader who wants to know how big the board is can see the board.
  */
-export const displayPuzzleId = (id: PuzzleId): string =>
-  `KA${id.level}-${id.source === 'new' ? 'N' : ''}${id.number}`;
+export const displayPuzzleId = (id: PuzzleId): string => `KA${id.level}-${id.number}`;

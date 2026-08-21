@@ -35,6 +35,12 @@ const TABLE: number[][][] = (() => {
 
 const EMPTY: number[] = [];
 
+/** Smallest total reachable with `size` distinct digits: 1+2+...+size. */
+export const minSum = (size: number): number => (size * (size + 1)) / 2;
+
+/** Largest total reachable with `size` distinct digits: 9+8+...  */
+export const maxSum = (size: number): number => (size * (19 - size)) / 2;
+
 /** Digit-set masks of `size` distinct digits summing to `sum`. Never null. */
 export function combosFor(size: number, sum: number): number[] {
   if (size < 1 || size > 9 || sum < 1 || sum > 45) return EMPTY;

@@ -18,11 +18,11 @@ const KEY = {
 } as const;
 
 /**
- * How many New puzzles each level offers. Generation is unlimited; this only
- * bounds the picker so "puzzles you have not played" stays a meaningful set.
- * Classic levels offer however many the pack holds.
+ * How many puzzles each board and level offers. Generation is unlimited; this
+ * only bounds the numbering so "puzzles you have not played" stays a
+ * meaningful set rather than an infinity.
  */
-export const NEW_POOL_SIZE = 400;
+export const POOL_SIZE = 400;
 
 export type Theme = 'night' | 'day' | 'contrast';
 
@@ -38,7 +38,7 @@ export interface Settings {
   autoRemoveMarks: boolean;
   /** Flag a repeat or overshoot the moment it is made, without consulting the answer. */
   instantCheck: boolean;
-  /** Keep the combination table open beside the board as you move around it. */
+  /** Leave the combination table up, floating over the board, as you move about. */
   showCombos: boolean;
   /** Hold a wake lock while a puzzle is open, so the screen stops dimming. */
   keepAwake: boolean;
@@ -56,7 +56,7 @@ export const DEFAULT_SETTINGS: Settings = {
   highlightSameDigit: true,
   autoRemoveMarks: true,
   instantCheck: false,
-  showCombos: true,
+  showCombos: false,
   keepAwake: true,
   showTimer: true,
   checkNeedsHold: true,
@@ -169,6 +169,13 @@ export function recordFinish(
   return next;
 }
 
+/** Put a puzzle back in the unplayed pool, as the bin in the picker does. */
+export function forgetPuzzle(history: History, id: PuzzleId): History {
+  const next = { ...history };
+  delete next[historyKey(id)];
+  return next;
+}
+
 /** Puzzle numbers of this size and level that have never been finished. */
 export function unplayedNumbers(
   history: History,
@@ -262,12 +269,10 @@ const MAX_CACHE = 24;
 type CacheTable = Record<string, Puzzle>;
 
 export function cachedPuzzle(id: PuzzleId): Puzzle | null {
-  if (id.source !== 'new') return null;
   return read<CacheTable>(KEY.cache, {})[historyKey(id)] ?? null;
 }
 
 export function cachePuzzle(id: PuzzleId, puzzle: Puzzle): void {
-  if (id.source !== 'new') return;
   const table = read<CacheTable>(KEY.cache, {});
   const key = historyKey(id);
   delete table[key];
@@ -278,10 +283,10 @@ export function cachePuzzle(id: PuzzleId, puzzle: Puzzle): void {
 }
 
 /**
- * New puzzles made by an older generator no longer exist: the same number now
+ * Puzzles made by an older generator no longer exist: the same number now
  * produces a different grid. Rather than leave saves and history pointing at
- * puzzles nobody can open again, they are cleared out on the first run after a
- * generator change. Classic history is untouched — those come from the packs.
+ * grids nobody can open again, they are cleared out on the first run after a
+ * generator change.
  *
  * Returns how many played puzzles were forgotten, so it can be said out loud
  * rather than happening silently.
@@ -295,15 +300,11 @@ export function retireGeneratedPuzzles(): number {
   const history = loadHistory();
   let forgotten = 0;
   for (const key of Object.keys(history)) {
-    if (!key.includes('N')) continue;
     if (history[key].finished || history[key].startedAt) forgotten++;
     delete history[key];
   }
   saveHistory(history);
-
-  const saves = loadSaves();
-  for (const key of Object.keys(saves)) if (key.includes('N')) delete saves[key];
-  write(KEY.save, saves);
+  write(KEY.save, {});
   write(KEY.cache, {});
 
   return forgotten;
@@ -312,16 +313,15 @@ export function retireGeneratedPuzzles(): number {
 // ------------------------------------------------------------- shared links
 
 /**
- * A link that opens one particular puzzle. Classic numbers name a pack entry.
- * New numbers name a seed *and* the generator that produced it — the same
- * number from an older generator is a different grid.
+ * A link that opens one particular puzzle. The number names a seed, and the
+ * link carries the generator that produced it — the same number from an older
+ * generator is a different grid.
  */
 export function puzzleLink(id: PuzzleId, href = window.location.href): string {
   const url = new URL(href);
   url.hash = '';
   url.searchParams.set('p', formatPuzzleId(id));
-  if (id.source === 'new') url.searchParams.set('g', String(GENERATOR_VERSION));
-  else url.searchParams.delete('g');
+  url.searchParams.set('g', String(GENERATOR_VERSION));
   return url.toString();
 }
 
@@ -336,11 +336,9 @@ export function parsePuzzleLink(href: string, generation = GENERATOR_VERSION): P
   if (!raw) return null;
   const id = parsePuzzleId(raw);
   if (!id) return null;
-  if (id.source === 'new') {
-    const rawGeneration = url.searchParams.get('g');
-    const madeBy = rawGeneration === null ? 1 : Number(rawGeneration);
-    if (!Number.isInteger(madeBy) || madeBy !== generation) return { ok: false, reason: 'stale-generator' };
-  }
+  const rawGeneration = url.searchParams.get('g');
+  const madeBy = rawGeneration === null ? 1 : Number(rawGeneration);
+  if (!Number.isInteger(madeBy) || madeBy !== generation) return { ok: false, reason: 'stale-generator' };
   return { ok: true, id };
 }
 

@@ -9,9 +9,9 @@ Vite + TypeScript, no runtime dependencies. `npm run dev`, `npm run build`,
 
 ## Installing
 
-It is a PWA: installable from the browser, and it runs offline. The service
-worker precaches the whole app, the Classic collection included, so there is
-nothing to gain by fetching the packs lazily and a train journey to lose.
+It is a PWA: installable from the browser, and it runs offline. Every puzzle is
+generated on the device, so there is no collection to download — the whole app
+is about 110 kB and works on a train from the first run.
 
 `npm run build` regenerates `dist/sw.js` from the actual build output, so the
 precache list always matches the hashed filenames. `npm run icons` redraws the
@@ -73,8 +73,12 @@ hard you want it to be.
 | --- | --- | --- |
 | Small | 9×9 | all six |
 | Medium | 12×12 | all six |
-| Large | 16×16 | most |
+| Large | 16×16 | four of six |
 | Huge | 20×20 | the harder end |
+
+Puzzles are generated on demand rather than shipped: there is no Classic and
+New split, just a board, a level and a number. Every number is the same grid on
+every device, so a link or a saved game still names one particular puzzle.
 
 Size is deliberately not part of the difficulty rating. While it was, a 20×20
 that fell to plain combination sums was being filed as a black belt purely for
@@ -109,8 +113,9 @@ be checked against what the grid really asked of you.
 
 **Every puzzle has exactly one answer and can be finished without guessing.**
 That is enforced rather than hoped for: the generator throws away any grid its
-technique solver cannot finish, and `npm run verify` re-checks the shipped packs
-by exhaustive search, independently of the thing that made them.
+technique solver cannot finish, and `npm test` re-checks generated puzzles by
+exhaustive search — a different argument from the generator's own, which
+reasons that a complete technique solve *is* a uniqueness proof.
 
 ## How the puzzles are made
 
@@ -158,9 +163,7 @@ are cut from, and `node tools/prof.ts` where the time goes.
 
 - `npm run dev` — development server
 - `npm run build` — typecheck, build into `dist/`, regenerate `sw.js`
-- `npm run packs [minutes]` — rebuild `public/packs/`, one file per board and
-  level, time-boxed so a scarce pair cannot eat the whole budget
-- `npm run verify` — check every shipped puzzle by exhaustive search
+- `npm run verify` — generate across the board-and-level matrix and report what is reachable
 - `npm test` — fast checks of the ladder, pack encoding, and shared links
 - `npm run icons` — redraw `public/icons/`
 

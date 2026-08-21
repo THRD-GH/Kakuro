@@ -1,6 +1,5 @@
 import { generatePuzzle } from '../core/generator.ts';
 import type { Puzzle, PuzzleId } from '../core/types.ts';
-import { classicPuzzle } from './packs.ts';
 import { cachePuzzle, cachedPuzzle } from './storage.ts';
 
 /**
@@ -14,7 +13,7 @@ let nextToken = 1;
 const pending = new Map<number, { resolve: (p: Puzzle) => void; reject: (e: Error) => void }>();
 const inflight = new Map<string, Promise<Puzzle>>();
 
-const puzzleKey = (id: PuzzleId): string => `${id.source}:${id.level}:${id.number}`;
+const puzzleKey = (id: PuzzleId): string => `${id.size}:${id.level}:${id.number}`;
 
 function ensureWorker(): Worker | null {
   if (worker) return worker;
@@ -62,11 +61,6 @@ export async function getPuzzle(id: PuzzleId): Promise<Puzzle> {
   const cached = cachedPuzzle(id);
   if (cached) return cached;
 
-  // Classic puzzles are a lookup, not a search — no worker needed.
-  if (id.source === 'classic') {
-    return classicPuzzle(id.size, id.level, id.number);
-  }
-
   const key = puzzleKey(id);
   const existing = inflight.get(key);
   if (existing) return existing;
@@ -85,6 +79,6 @@ export async function getPuzzle(id: PuzzleId): Promise<Puzzle> {
 
 /** Warm the cache for a puzzle the player is likely to open next. */
 export function prefetch(id: PuzzleId): void {
-  if (id.source === 'classic' || cachedPuzzle(id)) return;
+  if (cachedPuzzle(id)) return;
   void getPuzzle(id).catch(() => undefined);
 }

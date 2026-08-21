@@ -22,7 +22,7 @@ const TOGGLES: { heading: string; items: Toggle[] }[] = [
     items: [
       { key: 'highlightRuns', label: 'Highlight the runs', note: 'Tint the across and down runs through the cell you are on' },
       { key: 'highlightSameDigit', label: 'Highlight matching digits', note: 'Tint other cells holding the same digit' },
-      { key: 'showCombos', label: 'Show the combination table', note: 'The strip of combinations under the board' },
+      { key: 'showCombos', label: 'Leave the table up', note: 'The combination table floats over the board until dismissed — Table opens it either way' },
       { key: 'showTimer', label: 'Show the clock', note: 'Tap the clock to hide it mid-puzzle; it keeps running' },
     ],
   },

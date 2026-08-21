@@ -36,6 +36,8 @@ export interface PanelOptions {
   dismissable?: boolean;
   /** Fired when the panel is dismissed, not when an action button closes it. */
   onDismiss?: () => void;
+  /** Extra class on the panel, for the ones that want their own shape. */
+  panelClass?: string;
 }
 
 let dialogSerial = 0;
@@ -52,7 +54,7 @@ export function openOverlay(body: HTMLElement, options: PanelOptions): HTMLEleme
   const noteId = options.note ? `kk-dialog-note-${dialogSerial}` : undefined;
 
   const panel = el('div', {
-    class: 'panel',
+    class: `panel${options.panelClass ? ` ${options.panelClass}` : ''}`,
     role: 'dialog',
     'aria-modal': 'true',
     'aria-labelledby': titleId,

@@ -8,30 +8,31 @@ import { formatPuzzleId } from '../src/core/types.ts';
 import type { Puzzle, PuzzleId } from '../src/core/types.ts';
 
 const puzzle: Puzzle = decodePuzzle('4|0000089009700000', 1, 1);
-const classic: PuzzleId = { size: 9, level: 1, number: 1, source: 'classic' };
-const generated: PuzzleId = { size: 12, level: 3, number: 10, source: 'new' };
+const small: PuzzleId = { size: 9, level: 1, number: 1 };
+const medium: PuzzleId = { size: 12, level: 3, number: 10 };
 
-test('classic links are the puzzle id and nothing else', () => {
-  const href = puzzleLink(classic, 'https://dandoku.com/kakuro/');
-  assert.equal(href.includes('g='), false);
-  assert.deepEqual(parsePuzzleLink(href), { ok: true, id: classic });
-});
-
-test('new links carry the generator that made them', () => {
-  const href = puzzleLink(generated, 'https://dandoku.com/kakuro/play');
+test('a link is the puzzle id and the generator that made it', () => {
+  const href = puzzleLink(small, 'https://dandoku.com/kakuro/');
+  assert.ok(href.includes('p=9-1-1'));
   assert.ok(href.includes(`g=${GENERATOR_VERSION}`));
-  assert.deepEqual(parsePuzzleLink(href), { ok: true, id: generated });
+  assert.deepEqual(parsePuzzleLink(href), { ok: true, id: small });
 });
 
-test('a new link from another generator is stale', () => {
-  const href = 'https://dandoku.com/kakuro/?p=12-3-N10&g=0';
+test('a link survives a path and a query it did not put there', () => {
+  const href = puzzleLink(medium, 'https://dandoku.com/kakuro/play?utm=x');
+  assert.ok(href.includes('p=12-3-10'));
+  assert.deepEqual(parsePuzzleLink(href), { ok: true, id: medium });
+});
+
+test('a link from another generator is stale', () => {
+  const href = 'https://dandoku.com/kakuro/?p=12-3-10&g=0';
   assert.deepEqual(parsePuzzleLink(href, 1), { ok: false, reason: 'stale-generator' });
-  const legacy = parsePuzzleLink('https://dandoku.com/kakuro/?p=12-3-N10', 1);
-  assert.deepEqual(legacy, { ok: true, id: generated });
+  const legacy = parsePuzzleLink('https://dandoku.com/kakuro/?p=12-3-10', 1);
+  assert.deepEqual(legacy, { ok: true, id: medium });
 });
 
 test('a save for a different grid is dropped', () => {
-  const game = new Game(classic, puzzle);
+  const game = new Game(small, puzzle);
   game.write(5, 8, false);
   const save = game.toSave();
   assert.ok(saveFitsPuzzle(save, puzzle));
@@ -42,7 +43,7 @@ test('a save for a different grid is dropped', () => {
 });
 
 test('instant check flags a repeat, not a digit that merely is not the answer', () => {
-  const game = new Game(classic, puzzle);
+  const game = new Game(small, puzzle);
   game.write(5, 9, false);
   game.write(6, 9, false);
   const conflicts = game.conflictCells();
@@ -51,7 +52,7 @@ test('instant check flags a repeat, not a digit that merely is not the answer', 
 });
 
 test('rubbing an answer out leaves the pencil marks that were under it', () => {
-  const game = new Game(classic, puzzle);
+  const game = new Game(small, puzzle);
   game.toggleMark(5, 8);
   game.toggleMark(5, 9);
   game.write(5, 8, false);
@@ -64,7 +65,7 @@ test('rubbing an answer out leaves the pencil marks that were under it', () => {
 });
 
 test('fillMarks is a no-op when the board already has those marks', () => {
-  const game = new Game(classic, puzzle);
+  const game = new Game(small, puzzle);
   const once = game.fillMarks(() => 0x1ff);
   const twice = game.fillMarks(() => 0x1ff);
   assert.equal(once, true);
@@ -73,25 +74,25 @@ test('fillMarks is a no-op when the board already has those marks', () => {
 });
 
 test('check flags travel with the save', () => {
-  const game = new Game(classic, puzzle);
+  const game = new Game(small, puzzle);
   game.write(5, 9, false);
   game.flagged.add(5);
   const save = game.toSave();
   assert.deepEqual(save.flagged, [5]);
-  const resumed = new Game(classic, puzzle, save);
+  const resumed = new Game(small, puzzle, save);
   assert.ok(resumed.flagged.has(5));
 });
 
 test('replay stats keep the hints from the best time, not a running total', () => {
   // Keyed through formatPuzzleId rather than a literal: the key gained a size
   // when boards became a choice, and a hard-coded one would only say so here.
-  const key = formatPuzzleId(classic);
-  const first = recordFinish({}, classic, 12_000, 2, 1);
-  const slower = recordFinish(first, classic, 20_000, 9, 9);
+  const key = formatPuzzleId(small);
+  const first = recordFinish({}, small, 12_000, 2, 1);
+  const slower = recordFinish(first, small, 20_000, 9, 9);
   assert.equal(slower[key].hints, 2);
   assert.equal(slower[key].checks, 1);
   assert.equal(slower[key].bestMs, 12_000);
-  const faster = recordFinish(first, classic, 8_000, 0, 0);
+  const faster = recordFinish(first, small, 8_000, 0, 0);
   assert.equal(faster[key].hints, 0);
   assert.equal(faster[key].bestMs, 8_000);
 });

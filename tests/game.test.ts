@@ -1,16 +1,14 @@
 // The board as the player edits it: writing, rubbing out, pencil marks, undo,
 // and the save that has to survive the app being killed mid-puzzle.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { bit, digitsOf } from '../src/core/bits.ts';
-import { decodePuzzle } from '../src/core/encode.ts';
+import { generatePuzzle } from '../src/core/generator.ts';
 import { Game } from '../src/game/state.ts';
 
-const pack = JSON.parse(readFileSync(new URL('../public/packs/9-1.json', import.meta.url), 'utf8'));
-const puzzle = decodePuzzle(pack[0], 1, 1);
-const id = { size: 9, level: 1, number: 1, source: 'classic' } as const;
+const id = { size: 9, level: 1, number: 1 } as const;
+const puzzle = generatePuzzle(id);
 
 const newGame = () => new Game(id, puzzle);
 const firstAnswerCell = () => puzzle.solution.findIndex((d) => d > 0);

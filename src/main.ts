@@ -1,12 +1,11 @@
 import './style.css';
-import type { Level, PuzzleId, Size, Source } from './core/types.ts';
+import type { Level, PuzzleId, Size } from './core/types.ts';
 import { displayPuzzleId } from './core/types.ts';
 import { getPuzzle, prefetch } from './game/generate.ts';
-import { packCounts } from './game/packs.ts';
 import { registerServiceWorker, setThemeColour } from './game/pwa.ts';
 import { keepScreenAwake } from './game/wakelock.ts';
 import {
-  NEW_POOL_SIZE,
+  POOL_SIZE,
   clearPuzzleLink,
   linkedPuzzle,
   loadHistory,
@@ -18,7 +17,7 @@ import {
   unplayedNumbers,
 } from './game/storage.ts';
 import type { History, Settings, Theme } from './game/storage.ts';
-import type { AppContext, PackCounts } from './ui/app-context.ts';
+import type { AppContext } from './ui/app-context.ts';
 import { clear, el } from './ui/dom.ts';
 import { openHelp } from './ui/help.ts';
 import { buildMenu } from './ui/menu.ts';
@@ -43,12 +42,10 @@ const forgotten = retireGeneratedPuzzles();
 class App implements AppContext {
   settings: Settings = loadSettings();
   history: History = loadHistory();
-  packCounts: PackCounts | null = null;
-  readonly newPoolSize = NEW_POOL_SIZE;
+  readonly poolSize = POOL_SIZE;
 
   private root: HTMLElement;
   private play: PlayScreen | null = null;
-  private source: Source = 'classic';
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -80,14 +77,6 @@ class App implements AppContext {
     const linked = linkedPuzzle();
     clearPuzzleLink();
 
-    // Packs are optional: the menu renders either way and redraws once known.
-    void packCounts().then((counts) => {
-      this.packCounts = counts;
-      // With no Classic collection installed, New is the only thing to show.
-      if (!counts) this.source = 'new';
-      if (!this.play) this.goMenu();
-    });
-
     this.goMenu();
     if (linked?.ok) this.playPuzzle(linked.id);
     else if (linked && !linked.ok) {
@@ -110,10 +99,7 @@ class App implements AppContext {
     this.play = null;
     this.onMenu = true;
     clear(this.root);
-    this.root.append(buildMenu(this, this.source, (next) => {
-      this.source = next;
-      this.goMenu();
-    }));
+    this.root.append(buildMenu(this));
     this.syncGuard();
     this.applyWakeLock();
   }
@@ -156,7 +142,7 @@ class App implements AppContext {
         this.applyWakeLock();
 
         // The next puzzle at this level is very often what happens next.
-        if (id.source === 'new') prefetch({ ...id, number: id.number + 1 });
+        prefetch({ ...id, number: id.number + 1 });
       })
       .catch((error: unknown) => {
         toast(error instanceof Error ? error.message : 'That puzzle could not be opened');
@@ -176,17 +162,13 @@ class App implements AppContext {
     this.goMenu();
   }
 
-  playRandom(level: Level, source: Source): void {
+  playRandom(level: Level): void {
     const size = this.size;
-    const pool = source === 'classic' ? (this.packCounts?.[size]?.[level] ?? 0) : this.newPoolSize;
-    if (pool === 0) {
-      toast(`Level ${level} has no Classic puzzles on a ${size}×${size} board`);
-      return;
-    }
-    const unplayed = unplayedNumbers(this.history, { size, level, source }, pool);
-    const from = unplayed.length > 0 ? unplayed : Array.from({ length: pool }, (_, i) => i + 1);
+    const unplayed = unplayedNumbers(this.history, { size, level }, this.poolSize);
+    const from =
+      unplayed.length > 0 ? unplayed : Array.from({ length: this.poolSize }, (_, i) => i + 1);
     const number = from[Math.floor(Math.random() * from.length)];
-    this.playPuzzle({ size, level, number, source });
+    this.playPuzzle({ size, level, number });
   }
 
   // ----------------------------------------------------------------- settings

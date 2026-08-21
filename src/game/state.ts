@@ -131,6 +131,14 @@ export class Game {
     this.marks[cell] ^= bit(digit);
   }
 
+  /** Pencil one combination into a run's empty cells, as the table's Pencil in does. */
+  pencilInto(cells: number[], mask: number): void {
+    const targets = cells.filter((cell) => !this.isClue(cell) && !this.values[cell]);
+    if (targets.length === 0) return;
+    this.remember();
+    for (const cell of targets) this.marks[cell] = mask;
+  }
+
   /** Rub several pencil marks out at once — what a hint's Apply does. */
   rubOut(removals: [number, number][]): void {
     if (!removals.some(([cell, mask]) => this.marks[cell] & mask)) return;

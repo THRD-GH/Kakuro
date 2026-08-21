@@ -94,12 +94,36 @@ export class Board {
     const node = this.cells[cell];
     if (!node) return;
     node.focus({ preventScroll: true });
-    /*
-     * Zoomed, the board is larger than its pane, so the cursor can walk off the
-     * edge of what is on screen. `nearest` scrolls only when it has to, which
-     * keeps the board still while the cursor moves about the middle of it.
-     */
-    node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    this.keepInView(node);
+  }
+
+  /**
+   * Bring a cell into view when the board is zoomed, by scrolling its pane and
+   * nothing else.
+   *
+   * `scrollIntoView` cannot be used here. It walks every scrollable ancestor,
+   * so on a board that already fits it scrolled the *page* instead, and the
+   * whole grid shifted on screen at every tap on a cell.
+   */
+  private keepInView(node: HTMLElement): void {
+    const pane = this.node.parentElement;
+    if (!pane) return;
+    const scrollsY = pane.scrollHeight > pane.clientHeight;
+    const scrollsX = pane.scrollWidth > pane.clientWidth;
+    if (!scrollsX && !scrollsY) return;
+
+    const cell = node.getBoundingClientRect();
+    const view = pane.getBoundingClientRect();
+    const margin = cell.height;
+
+    if (scrollsY) {
+      if (cell.top < view.top + margin) pane.scrollTop -= view.top + margin - cell.top;
+      else if (cell.bottom > view.bottom - margin) pane.scrollTop += cell.bottom - (view.bottom - margin);
+    }
+    if (scrollsX) {
+      if (cell.left < view.left + margin) pane.scrollLeft -= view.left + margin - cell.left;
+      else if (cell.right > view.right - margin) pane.scrollLeft += cell.right - (view.right - margin);
+    }
   }
 
   get selection(): number {

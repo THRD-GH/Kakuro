@@ -8,7 +8,7 @@ import type { SavedGame } from '../game/storage.ts';
 import { dropSave, puzzleLink, putSave, recordFinish, recordStart } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
 import { Board } from './board.ts';
-import { CombosPanel } from './combos.ts';
+import { openCombinations } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
 import { bindTap } from './pointer.ts';
 import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
@@ -19,7 +19,6 @@ export class PlayScreen {
   private app: AppContext;
   private game: Game;
   private board: Board;
-  private combos: CombosPanel;
 
   private clock: HTMLElement;
   private claim!: HTMLElement;
@@ -31,6 +30,8 @@ export class PlayScreen {
   private notes = false;
   private zoomed = false;
   private zoomButton!: HTMLButtonElement;
+  private pauseButton!: HTMLButtonElement;
+  private paused = false;
   /** How far down the current line of reasoning Hint has walked. */
   private hintDepth = 0;
   private ticker: number | null = null;
@@ -43,7 +44,6 @@ export class PlayScreen {
     app.history = recordStart(app.history, id);
 
     this.board = new Board(this.game, app.settings, (cell) => this.select(cell));
-    this.combos = new CombosPanel(this.game);
 
     this.clock = el('button', { class: 'clock', type: 'button', 'aria-label': 'Time' });
     this.clock.addEventListener('click', () => {
@@ -54,30 +54,49 @@ export class PlayScreen {
     this.hintNote = el('div', { class: 'hint-note', 'aria-live': 'polite' });
 
     this.noteButton = el('button', {
-      class: 'key edit',
+      class: 'key act',
       type: 'button',
       'aria-pressed': 'false',
       text: 'Notes',
     });
     this.noteButton.addEventListener('click', () => this.setNotes(!this.notes));
 
-    this.undoButton = el('button', { class: 'key edit', type: 'button', text: 'Undo' });
+    this.undoButton = el('button', {
+      class: 'key act glyph',
+      type: 'button',
+      'aria-label': 'Undo',
+      title: 'Undo',
+      text: '↶',
+    });
     this.undoButton.addEventListener('click', () => this.undo());
-    this.redoButton = el('button', { class: 'key edit', type: 'button', text: 'Redo' });
+    this.redoButton = el('button', {
+      class: 'key act glyph',
+      type: 'button',
+      'aria-label': 'Redo',
+      title: 'Redo',
+      text: '↷',
+    });
     this.redoButton.addEventListener('click', () => this.redo());
 
     this.node = el(
       'div',
       { class: 'play' },
       this.topBar(id, puzzle),
-      el('div', { class: 'board-wrap' }, this.board.node),
-      this.hintNote,
-      el('div', { class: 'combos-wrap' }, this.combos.node),
-      this.keypad(),
-      this.actions(),
+      /*
+       * The table and the hint both float over the board rather than taking a
+       * slice of the screen for themselves. In the column they pushed: opening
+       * a hint on a short screen shrank the grid from 354px to 262px under the
+       * player's hands, which is no way to read a board.
+       */
+      el(
+        'div',
+        { class: 'board-area' },
+        el('div', { class: 'board-wrap' }, this.board.node),
+        el('div', { class: 'board-overlays' }, this.hintNote),
+      ),
+      this.controls(),
     );
 
-    this.applyCombosSetting();
     /*
      * Big boards start zoomed on a narrow screen. Fitted to a phone, a 20x20
      * gives each cell about eighteen pixels: the answers are still readable but
@@ -128,7 +147,15 @@ export class PlayScreen {
     );
   }
 
-  private keypad(): HTMLElement {
+  /*
+   * One control block, laid out as Killer Sudoku lays its own out: the digits
+   * as a three-by-three pad on one side and the buttons as a matching
+   * three-by-three on the other. Nine and nine, the same size and the same
+   * rhythm, rather than a pad with an odd column of extras bolted to it — that
+   * arrangement was what let four stacked buttons set the height of three rows
+   * of digits and inflate the whole thing.
+   */
+  private controls(): HTMLElement {
     const pad = el('div', { class: 'keypad' });
     for (let digit = 1; digit <= 9; digit++) {
       const key = el('button', { class: 'key digit', type: 'button', text: String(digit) });
@@ -141,42 +168,97 @@ export class PlayScreen {
       pad.append(key);
     }
 
-    const erase = el('button', { class: 'key edit', type: 'button', text: 'Clear' });
+    const erase = el('button', { class: 'key act', type: 'button', text: 'Clear' });
     if (this.app.settings.clearNeedsHold) bindTap(erase, { onHold: () => this.eraseCell() });
     else bindTap(erase, { onTap: () => this.eraseCell() });
 
-    return el(
-      'div',
-      { class: 'keypad-wrap' },
-      pad,
-      el('div', { class: 'keypad-side' }, this.noteButton, erase, this.undoButton, this.redoButton),
-    );
-  }
-
-  private actions(): HTMLElement {
-    const check = el('button', { class: 'action', type: 'button', text: 'Check' });
+    const check = el('button', { class: 'key act', type: 'button', text: 'Check' });
     if (this.app.settings.checkNeedsHold) bindTap(check, { onHold: () => this.check() });
     else bindTap(check, { onTap: () => this.check() });
 
-    const hint = el('button', { class: 'action', type: 'button', text: 'Hint' });
+    const hint = el('button', { class: 'key act', type: 'button', text: 'Hint' });
     if (this.app.settings.hintNeedsHold) bindTap(hint, { onHold: () => this.hint() });
     else bindTap(hint, { onTap: () => this.hint() });
 
-    const table = el('button', { class: 'action', type: 'button', text: 'Table' });
-    table.addEventListener('click', () => {
-      this.app.settings.showCombos = !this.app.settings.showCombos;
-      this.applyCombosSetting();
-    });
+    const table = el('button', { class: 'key act', type: 'button', text: 'Table' });
+    table.addEventListener('click', () => this.openTable());
 
     this.zoomButton = el('button', {
-      class: 'action',
+      class: 'key act glyph',
       type: 'button',
       'aria-pressed': 'false',
-      text: 'Zoom',
+      'aria-label': 'Zoom',
+      title: 'Zoom',
+      text: '⤢',
     });
     this.zoomButton.addEventListener('click', () => this.setZoom(!this.zoomed));
 
-    return el('div', { class: 'actions' }, check, hint, table, this.zoomButton);
+    this.pauseButton = el('button', {
+      class: 'key act glyph',
+      type: 'button',
+      'aria-pressed': 'false',
+      'aria-label': 'Pause',
+      title: 'Pause',
+      text: '⏸',
+    });
+    this.pauseButton.addEventListener('click', () => this.setPaused(!this.paused));
+
+    return el(
+      'div',
+      { class: 'controls' },
+      el('div', { class: 'controls-left' }, pad),
+      el(
+        'div',
+        { class: 'controls-right' },
+        el(
+          'div',
+          { class: 'actions' },
+          this.noteButton,
+          erase,
+          check,
+          hint,
+          table,
+          this.undoButton,
+          this.redoButton,
+          this.zoomButton,
+          this.pauseButton,
+        ),
+      ),
+    );
+  }
+
+  /** The combination finder, on the run through the cell in hand. */
+  private openTable(): void {
+    const cell = this.board.selection;
+    if (cell < 0 || this.game.isClue(cell)) {
+      toast('Pick a cell first — the table works on the runs through it.');
+      return;
+    }
+    openCombinations(this.game, cell, (run, mask) => {
+      const empty = run.cells.filter((at) => !this.game.values[at]);
+      this.game.pencilInto(empty, mask);
+      this.afterEdit();
+      toast('Pencilled in.');
+    });
+  }
+
+  /**
+   * Pause hides the board and stops the clock. Both halves matter: a clock
+   * that keeps running while you answer the door makes the time meaningless,
+   * and a board still on screen makes stopping the clock a way to study it for
+   * free.
+   */
+  private setPaused(on: boolean): void {
+    if (this.finished) return;
+    this.paused = on;
+    this.pauseButton.setAttribute('aria-pressed', String(on));
+    this.pauseButton.classList.toggle('on', on);
+    this.pauseButton.textContent = on ? '▶' : '⏸';
+    this.pauseButton.setAttribute('aria-label', on ? 'Resume' : 'Pause');
+    this.node.querySelector('.board-area')?.classList.toggle('paused', on);
+    if (on) this.game.pause();
+    else this.game.start();
+    this.tick();
   }
 
   private setZoom(on: boolean): void {
@@ -185,12 +267,6 @@ export class PlayScreen {
     this.zoomButton.classList.toggle('on', on);
     this.node.querySelector('.board-wrap')?.classList.toggle('zoomed', on);
     if (this.board.selection >= 0) this.board.select(this.board.selection);
-  }
-
-  private applyCombosSetting(): void {
-    this.node
-      .querySelector('.combos-wrap')
-      ?.classList.toggle('folded', !this.app.settings.showCombos);
   }
 
   // ----------------------------------------------------------------- editing
@@ -203,7 +279,6 @@ export class PlayScreen {
   private select(cell: number): void {
     if (cell < 0) return;
     this.board.select(cell);
-    this.combos.show(cell);
   }
 
   private setNotes(on: boolean): void {
@@ -249,7 +324,6 @@ export class PlayScreen {
   private afterEdit(): void {
     this.hintDepth = 0;
     this.board.paint();
-    this.combos.show(this.board.selection);
     this.undoButton.disabled = !this.game.canUndo;
     this.redoButton.disabled = !this.game.canRedo;
     this.queueSave();
@@ -491,7 +565,7 @@ export class PlayScreen {
           {
             label: 'Next puzzle',
             primary: true,
-            onClick: () => this.app.playRandom(this.game.id.level, this.game.id.source),
+            onClick: () => this.app.playRandom(this.game.id.level),
           },
         ],
       },
@@ -572,7 +646,7 @@ export class PlayScreen {
   }
 
   resume(): void {
-    if (!this.finished) this.game.start();
+    if (!this.finished && !this.paused) this.game.start();
   }
 
   private queueSave(): void {
@@ -600,7 +674,6 @@ export class PlayScreen {
 
   refreshBoard(): void {
     this.board.useSettings(this.app.settings);
-    this.applyCombosSetting();
     this.tick();
   }
 

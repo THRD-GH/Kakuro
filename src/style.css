@@ -203,11 +203,12 @@ p {
 }
 
 .resume-wrap {
-  margin-bottom: 1.1rem;
+  margin-bottom: 0.9rem;
 }
 
 .resume-wrap h2,
-.levels-head h2 {
+.sizes h2,
+.levels h2 {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -215,65 +216,36 @@ p {
   margin-bottom: 0.45rem;
 }
 
-.resume-list {
-  display: grid;
+.resume-strip {
+  display: flex;
   gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+  scrollbar-width: thin;
 }
 
 .resume {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
+  flex: 0 0 auto;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.4rem 0.7rem;
   text-align: left;
 }
 
 .resume b {
+  font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
 }
 
 .resume span {
   color: var(--dim);
-  font-size: 0.85rem;
-  margin-left: auto;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.levels-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.35rem;
-}
 
-.source-tabs {
-  margin-left: auto;
-  display: flex;
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
 
-.source-tab {
-  border: 0;
-  border-radius: 0;
-  padding: 0.35rem 0.8rem;
-  font-size: 0.85rem;
-  background: transparent;
-  color: var(--dim);
-}
 
-.source-tab.on {
-  background: var(--panel-2);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.levels-note {
-  color: var(--dim);
-  font-size: 0.85rem;
-  line-height: 1.45;
-  margin-bottom: 0.7rem;
-}
 
 .level-row {
   width: 100%;
@@ -391,6 +363,7 @@ p {
  * board takes the rest — square, centred, and as large as that leaves room for.
  */
 .play {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -398,11 +371,19 @@ p {
   overflow: hidden;
 }
 
-.board-wrap {
+/* The space the board lives in, and what the table floats over. */
+.board-area {
+  position: relative;
   /* `0` rather than `auto` for the basis: a flex item sized from its content
      has an indefinite height, and the board inside needs a definite one to
      measure itself against. */
   flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+}
+
+.board-wrap {
   min-height: 0;
   min-width: 0;
   container-type: size;
@@ -428,7 +409,14 @@ p {
    */
   container-type: size;
   display: grid;
-  grid-template-columns: repeat(var(--n), 1fr);
+  /*
+   * Rows as well as columns, explicitly. Left implicit, the row heights come
+   * from what is in the cells, so writing a digit into an empty cell made that
+   * row taller and the whole grid re-laid itself under the player's finger.
+   * Fixed tracks mean the geometry never depends on the contents.
+   */
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--n), minmax(0, 1fr));
   gap: 1px;
   /*
    * Square, and as large as the smaller side of the wrap allows. Setting one
@@ -607,122 +595,305 @@ p {
 
 /* --------------------------------------------------------- combination table */
 
-.combos-wrap {
-  flex: 0 0 auto;
-  max-height: 30%;
-  overflow-y: auto;
+/*
+ * What floats over the board: the hint, then the table under it. The strip
+ * itself ignores the pointer so the board stays reachable around them.
+ */
+.board-overlays {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  pointer-events: none;
 }
 
-.combos-wrap.folded {
-  display: none;
+.board-overlays > * {
+  pointer-events: auto;
 }
 
-.combos {
+
+/* ------------------------------------------------------------ board picker */
+
+.sizes {
+  margin-bottom: 0.9rem;
+}
+
+.size-row {
   display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.4rem;
 }
 
-.combos-idle {
+.size-choice {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.3rem 0.45rem;
+}
+
+.size-choice b {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.size-choice span {
+  font-size: 0.68rem;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.size-choice.on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/*
+ * A scrap of the board at the density that size is really drawn at, so the
+ * choice reads as "how much grid" rather than as four numbers. The dark band
+ * along the top and left is the clue margin every kakuro has, which is what
+ * makes the sketch read as this game rather than as graph paper.
+ */
+.size-glyph {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--line-strong);
+  background-image:
+    repeating-linear-gradient(to right, var(--rule) 0 1px, transparent 1px var(--step)),
+    repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px var(--step)),
+    linear-gradient(to right, var(--block) 0 var(--step), transparent var(--step)),
+    linear-gradient(to bottom, var(--block) 0 var(--step), transparent var(--step));
+  background-color: var(--cell);
+}
+
+.size-9 {
+  --step: 0.34rem;
+}
+
+.size-12 {
+  --step: 0.26rem;
+}
+
+.size-16 {
+  --step: 0.2rem;
+}
+
+.size-20 {
+  --step: 0.16rem;
+}
+
+/* -------------------------------------------------- the combination finder */
+
+/*
+ * Built like the sum calculator in Killer Sudoku, because it answers the same
+ * question: the clue is prefilled, digits cycle through required and ruled
+ * out, the list narrows as you go, and a single surviving combination can be
+ * pencilled straight in. Kakuro has two clues through every cell rather than
+ * one cage, so the run is a tab rather than a given.
+ */
+.calc-body {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.calc-tabs {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.calc-tab {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+}
+
+.calc-tab.on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.calc-lede {
+  color: var(--dim);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.calc-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.calc-keys {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.25rem;
+}
+
+.calc-key {
+  min-height: 2.2rem;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  background: var(--k-face);
+}
+
+/* Green for required, red for ruled out — the two states the list filters on. */
+.calc-key.inc {
+  background: color-mix(in srgb, var(--met) 26%, var(--panel));
+  border-color: var(--met);
+  font-weight: 650;
+}
+
+.calc-key.exc {
+  background: color-mix(in srgb, var(--error) 22%, var(--panel));
+  border-color: var(--error);
+  text-decoration: line-through;
+}
+
+/* Facts about the board rather than filters: already in, or with nowhere to go. */
+.calc-key.placed {
+  box-shadow: inset 0 -3px 0 var(--met);
+}
+
+.calc-key.blocked {
+  opacity: 0.55;
+}
+
+.calc-fields {
+  display: grid;
+  gap: 0.3rem;
+  width: 6.5rem;
+}
+
+.calc-fields label {
+  display: grid;
+  gap: 0.1rem;
+  font-size: 0.7rem;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.calc-fields input {
+  width: 100%;
+  padding: 0.3rem 0.4rem;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--cell);
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+}
+
+.calc-results {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 0.3rem;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.calc-combo {
+  display: inline-flex;
+  gap: 0.15rem;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  background: var(--panel-2);
+}
+
+.calc-combo.struck {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.calc-combo .placed {
+  color: var(--met);
+  font-weight: 800;
+}
+
+.calc-combo .blocked {
+  opacity: 0.5;
+}
+
+.calc-none {
   color: var(--dim);
   font-size: 0.82rem;
 }
 
-.combos-run {
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  background: var(--panel);
-  padding: 0.4rem 0.55rem;
+.calc-foot {
+  display: flex;
+  gap: 0.4rem;
 }
 
-.combos-head {
-  display: flex;
-  align-items: baseline;
+.calc-btn {
+  flex: 1;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+/* ------------------------------------------------------------- the controls */
+
+/*
+ * Digits on one side, buttons on the other, both as a three-by-three of the
+ * same size. The previous arrangement hung a column of four extras off the
+ * pad, and four stacked buttons against three rows of digits set the height of
+ * the whole block — a 44px key came out 64px and the controls took a quarter
+ * of the screen.
+ */
+.controls {
+  flex: 0 0 auto;
+  display: grid;
+  /* The digits are pressed more than everything else put together, so they
+     get the wider half. */
+  grid-template-columns: 1.2fr 1fr;
   gap: 0.5rem;
-  margin-bottom: 0.3rem;
 }
 
-.combos-head b {
-  font-size: 0.9rem;
-}
-
-.combos-head span {
-  color: var(--dim);
-  font-size: 0.76rem;
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-}
-
-.combos-list {
-  display: flex;
-  flex-wrap: wrap;
+.keypad,
+.actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.3rem;
 }
 
-.combo {
-  display: inline-flex;
-  gap: 0.1rem;
-  padding: 0.12rem 0.35rem;
-  border: 1px solid var(--line);
-  border-radius: 0.3rem;
-  background: var(--panel-2);
-  font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.combo em {
-  font-style: normal;
-}
-
-.combo.out {
-  opacity: 0.4;
-}
-
-.combos-none {
-  color: var(--error);
-  font-size: 0.8rem;
-}
-
-/* -------------------------------------------------------------- the keypad */
-
-.keypad-wrap {
-  flex: 0 0 auto;
-  display: flex;
-  gap: 0.45rem;
-}
-
-.keypad {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.35rem;
-}
-
-.keypad-side {
-  display: grid;
-  grid-template-rows: repeat(4, 1fr);
-  gap: 0.35rem;
-  width: 5.2rem;
-}
-
 .key {
-  /* A tap target you can hit without looking: 44px is the floor, and the
-     digits are pressed more than everything else in the game put together. */
-  min-height: 2.9rem;
-  padding: 0.4rem 0;
+  /* A tap target you can hit without looking: 44px is the floor. The ceiling
+     matters just as much — every pixel these take is one off the board. */
+  min-height: 2.75rem;
+  max-height: 3.1rem;
+  padding: 0.25rem 0;
   border-radius: 0.6rem;
 }
 
 .key.digit {
-  font-size: 1.45rem;
+  font-size: 1.4rem;
   font-weight: 500;
   background: var(--k-face);
   border-color: var(--k-face-line);
   font-variant-numeric: tabular-nums;
 }
 
-.key.edit {
-  font-size: 0.85rem;
+.key.act {
+  font-size: 0.78rem;
   background: var(--k-edit);
+}
+
+/* Undo, redo, zoom and pause carry a symbol rather than a word: they are the
+   four that are recognised faster as a shape, and it buys the labels beside
+   them room to stay readable. */
+.key.glyph {
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .key.on {
@@ -735,23 +906,6 @@ p {
   background: var(--sel);
 }
 
-.actions {
-  flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.35rem;
-}
-
-.action {
-  min-height: 2.6rem;
-  padding: 0.4rem 0;
-  font-size: 0.88rem;
-}
-
-.action.holding {
-  background: var(--sel);
-}
-
 /* ----------------------------------------------------------------- hinting */
 
 .hint-note:empty {
@@ -760,7 +914,6 @@ p {
 
 .hint-note {
   position: relative;
-  flex: 0 0 auto;
   padding: 0.6rem 2rem 0.6rem 0.7rem;
   border: 1px solid var(--accent);
   border-left-width: 4px;
@@ -1131,15 +1284,14 @@ p {
  */
 @media (min-width: 46rem) and (min-height: 34rem) {
   #app {
-    max-width: 54rem;
+    max-width: 56rem;
   }
 
   .play {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 15rem;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) 19rem;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 0.5rem 0.75rem;
-    align-items: stretch;
   }
 
   .play-bar {
@@ -1147,123 +1299,19 @@ p {
     grid-row: 1;
   }
 
-  /* The board spans every row below the bar, so it is the tallest thing here. */
-  .board-wrap {
+  .board-area {
     grid-column: 1;
-    grid-row: 2 / -1;
+    grid-row: 2;
   }
 
-  .keypad-wrap {
+  /* Beside the board the two blocks stack rather than sitting side by side:
+     the column is tall and narrow, which suits that far better. */
+  .controls {
     grid-column: 2;
     grid-row: 2;
-    display: grid;
-    grid-template-rows: auto auto;
-    gap: 0.4rem;
-    align-content: start;
-  }
-
-  .keypad-side {
-    width: auto;
-    grid-template-rows: none;
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .actions {
-    grid-column: 2;
-    grid-row: 3;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     align-self: start;
   }
-
-  .play > .hint-note {
-    grid-column: 2;
-    grid-row: 4;
-    align-self: start;
-  }
-
-  .play > .combos-wrap {
-    grid-column: 2;
-    grid-row: 5;
-    max-height: none;
-    align-self: start;
-  }
-}
-
-/* ------------------------------------------------------------ board picker */
-
-.sizes {
-  margin-bottom: 1.1rem;
-}
-
-.sizes h2 {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--dim);
-  margin-bottom: 0.45rem;
-}
-
-.size-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.4rem;
-}
-
-.size-choice {
-  display: grid;
-  justify-items: center;
-  gap: 0.25rem;
-  padding: 0.55rem 0.3rem 0.45rem;
-}
-
-.size-choice b {
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.size-choice span {
-  font-size: 0.68rem;
-  color: var(--dim);
-  font-variant-numeric: tabular-nums;
-}
-
-.size-choice.on {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-}
-
-/*
- * A scrap of the board itself, at the density that size is really drawn at, so
- * the choice reads as "how much grid" rather than as four numbers.
- */
-.size-glyph {
-  width: 1.6rem;
-  height: 1.6rem;
-  border: 1px solid var(--line-strong);
-  background:
-    repeating-linear-gradient(to right, var(--rule) 0 1px, transparent 1px var(--step)),
-    repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px var(--step)),
-    var(--cell);
-}
-
-.size-9 {
-  --step: 0.32rem;
-}
-.size-12 {
-  --step: 0.24rem;
-}
-.size-16 {
-  --step: 0.18rem;
-}
-.size-20 {
-  --step: 0.14rem;
-}
-
-.resume-size {
-  font-style: normal;
-  font-size: 0.72rem;
-  color: var(--dim);
-  font-variant-numeric: tabular-nums;
 }
 
 /*
@@ -1279,8 +1327,8 @@ p {
 
   .play {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 16rem);
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 17rem);
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 0.4rem 0.5rem;
     height: calc(100dvh - 0.8rem);
   }
@@ -1291,51 +1339,117 @@ p {
     padding: 0;
   }
 
-  /* The board spans every remaining row: nothing sits above or below it. */
-  .board-wrap {
+  .board-area {
     grid-column: 1;
-    grid-row: 2 / -1;
-  }
-
-  .play > .hint-note {
-    grid-column: 2;
     grid-row: 2;
   }
 
-  /* The table needs width to be worth reading, and there is none to spare. */
-  .play > .combos-wrap {
-    display: none;
-  }
-
-  .keypad-wrap {
+  .controls {
     grid-column: 2;
-    grid-row: 3;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  .keypad {
-    flex: 1 1 auto;
-    grid-auto-rows: minmax(0, 1fr);
-  }
-
-  .keypad-side {
-    width: auto;
-    grid-template-rows: none;
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .actions {
-    grid-column: 2;
-    grid-row: 4;
+    grid-row: 2;
+    align-self: start;
   }
 
   .key {
-    min-height: 0;
+    min-height: 2.4rem;
+    max-height: 2.8rem;
   }
 
-  .action {
-    min-height: 2.1rem;
-    font-size: 0.8rem;
+  .key.digit {
+    font-size: 1.2rem;
   }
+}
+
+/* --------------------------------------------------------------- paused */
+
+/*
+ * Pause hides the board as well as stopping the clock. Stopping the clock on
+ * its own would just be a way to study the grid for free.
+ */
+.board-area.paused .board {
+  filter: blur(9px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.board-area.paused::after {
+  content: 'Paused';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ------------------------------------------------------- unfinished games */
+
+.resume-open {
+  width: 100%;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+}
+
+.resume-open b {
+  font-size: 0.9rem;
+}
+
+.resume-open span {
+  color: var(--dim);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.picker-summary {
+  color: var(--dim);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin-bottom: 0.5rem;
+}
+
+.picker-rows {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.picker-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.picker-open {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+}
+
+.picker-open b {
+  font-variant-numeric: tabular-nums;
+}
+
+.picker-what,
+.picker-when {
+  color: var(--dim);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.picker-bin {
+  flex: 0 0 2.6rem;
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+}
+
+.picker-bin:hover {
+  color: var(--error);
+  border-color: var(--error);
 }

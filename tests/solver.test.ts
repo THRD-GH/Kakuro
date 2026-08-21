@@ -6,40 +6,31 @@
 // the answer the puzzle was built from. It may fail to find a step; it may
 // never claim a wrong one.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { bit, digitsOf, popcount } from '../src/core/bits.ts';
 import { combosFor } from '../src/core/combos.ts';
-import { decodePuzzle } from '../src/core/encode.ts';
+import { generatePuzzle } from '../src/core/generator.ts';
 import { Solver, countSolutions } from '../src/core/solver.ts';
+import { LEVELS } from '../src/core/types.ts';
 import { mulberry32 } from '../src/core/rng.ts';
-import type { Level } from '../src/core/types.ts';
+import type { Size } from '../src/core/types.ts';
 
 /**
- * A spread across the whole matrix rather than the top of one pack six times
- * over: several boards, several levels, and whatever the shipped collection
- * actually holds for each pair — not every size reaches every level.
+ * A spread across the matrix: several boards, several levels. Generated rather
+ * than read from a pack, because there are no packs — every puzzle in the game
+ * is made on the device, so these are the very same grids a player would meet.
  */
-function samplePuzzles(perCell = 3) {
-  const index = JSON.parse(
-    readFileSync(new URL('../public/packs/index.json', import.meta.url), 'utf8'),
-  ) as { counts: Record<string, Record<string, number>> };
-
+function samplePuzzles() {
   const out = [];
-  for (const [size, levels] of Object.entries(index.counts)) {
-    for (const [level, held] of Object.entries(levels)) {
-      if (!held) continue;
-      const pack = JSON.parse(
-        readFileSync(new URL(`../public/packs/${size}-${level}.json`, import.meta.url), 'utf8'),
-      ) as string[];
-      const stride = Math.max(1, Math.floor(pack.length / perCell));
-      for (let i = 0, taken = 0; i < pack.length && taken < perCell; i += stride, taken++) {
-        out.push(decodePuzzle(pack[i], Number(level) as Level, i + 1));
+  for (const size of [9, 12] as Size[]) {
+    for (const level of LEVELS) {
+      for (let number = 1; number <= 2; number++) {
+        out.push(generatePuzzle({ size, level, number }));
       }
     }
   }
-  if (out.length === 0) throw new Error('no packs to check — run `npm run packs` first');
+  out.push(generatePuzzle({ size: 16, level: 5, number: 1 }));
   return out;
 }
 
@@ -99,7 +90,7 @@ test('the ladder always has something to say until the grid is full', () => {
   }
 });
 
-test('every shipped puzzle has exactly one answer', () => {
+test('every generated puzzle has exactly one answer', () => {
   // By exhaustive search, which is a different argument from the one the
   // generator makes: it trusts that a complete technique solve is a proof.
   for (const puzzle of puzzles) {

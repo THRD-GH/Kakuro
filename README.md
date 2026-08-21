@@ -50,18 +50,34 @@ bar also reserves its own height under the board, so the bottom row can always
 be scrolled clear of it.
 
 **The table** is a strip over the foot of the board showing what can still go
-in the cell you are on, both clues through it at once. A combination reads as the run
-itself: the digits already written, in their places, and the ones still to come
-bracketed in the gap they go in. A 39 across reading `8 4 _ _ 5 9` shows as
-`8 4 (67) 5 9`, so the bracket can be read straight onto the cells it belongs
-to without counting along the row. A run split into more than one gap lists the
-set once and marks the other gaps with a dot. It follows the cursor, tap a combination to pencil it into the
-run, hold one to rule it out, and Table folds it away.
+in the cell you are on, both clues through it at once. A combination reads as
+the run itself: the digits already written, in their places, and the ones still
+to come bracketed in the gap they go in. A 39 across reading `8 4 _ _ 5 9`
+shows as `8 4 (67) 5 9`, so the bracket can be read straight onto the cells it
+belongs to without counting along the row. It follows the cursor, tap a
+combination to pencil it into the run, hold one to rule it out, and Table folds
+it away.
+
+Once the empty cells are no longer one stretch there is no gap the set belongs
+in, and putting it in the first says something untrue — `_ _ _ 3 _ 2 _ _` came
+out `(456789) 3 · 2 ·`, which reads as six digits going into the first three
+cells. So a broken run dots every empty cell and states the set once at the
+end: `· 4 · 5 · · = 6789`. The dots also carry how wide each gap is, which the
+first-gap bracket threw away.
 
 Only combinations that can actually be *dealt out* are listed — the same
 matching test the solver uses — so a set needing a 7 is dropped when every
 empty cell of the run crosses a run that already has one. That is both more
 useful and much shorter than listing everything that merely adds up.
+
+**Your own pencil marks count too.** A cell marked `2 3` is you saying it is
+one of those two, so a set with nothing for it is not on offer: a 10 down
+listing `19 28 37 46` comes down to `28 37`. Without that, the strip went on
+showing the same dozen sets it showed from the opening position long after the
+cells had been narrowed down by hand — the moment it had least to say was the
+moment it was saying most. It cuts the other way as well, and that is the point:
+marks that cannot be right leave the run with *nothing that fits*, which is
+worth being told before the rest of the grid is built on them.
 
 **Hint** names the technique that cracks the position, explains why it works
 and tints the cells it is talking about; it only writes the digit in if asked.

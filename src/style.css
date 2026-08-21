@@ -860,10 +860,22 @@ p {
   margin-left: 0.25rem;
 }
 
-/* Another gap in the same run, filled from the same set listed once above. */
+/* An empty cell of a run that is broken into more than one gap. There is no
+   one gap the set belongs in, so each empty cell is dotted — which also shows
+   how wide each gap is — and the digits follow once, after an `=`. */
 .combo em.gap {
   color: var(--dim);
   margin-left: 0.25rem;
+}
+
+.combo-open.split {
+  margin-left: 0.3rem;
+}
+
+.combo .combo-eq {
+  font-style: normal;
+  color: var(--dim);
+  margin-right: 0.1rem;
 }
 
 /* A digit with nowhere to go in this run: the combination is still listed,

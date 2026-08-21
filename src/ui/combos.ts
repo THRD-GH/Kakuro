@@ -59,16 +59,8 @@ export class CombosBar {
 
   private rowFor(run: Run): HTMLElement {
     const game = this.game;
-    let used = 0;
-    let left = run.sum;
-    const open: number[] = [];
-    for (const at of run.cells) {
-      const digit = game.values[at];
-      if (digit) {
-        used |= bit(digit);
-        left -= digit;
-      } else open.push(at);
-    }
+    const { used, left, open, masks, gaps } = runState(game, run);
+    const split = gaps > 1;
 
     const head = el(
       'b',
@@ -88,21 +80,6 @@ export class CombosBar {
       );
       return row;
     }
-
-    /*
-     * What each empty cell of this run could still take: anything not already
-     * in the run, and not already in the run crossing that cell.
-     */
-    const masks = open.map((at) => {
-      const crossing = run.dir === 'across' ? game.downRun(at) : game.acrossRun(at);
-      let mask = ALL & ~used;
-      if (crossing) {
-        for (const other of crossing.cells) {
-          if (game.values[other]) mask &= ~bit(game.values[other]);
-        }
-      }
-      return mask;
-    });
 
     // A digit nowhere in the run can take is worth dimming where it appears.
     let blocked = 0;
@@ -132,7 +109,7 @@ export class CombosBar {
       });
       /*
        * The run as it sits on the board: the digits already written, in their
-       * places, and the ones still to come bracketed in the gap they go in.
+       * places, and the ones still to come shown against the cells they go in.
        * A 39 across reading `8 4 _ _ 5 9` shows as `8 4 (67) 5 9`.
        *
        * Collected at the front — `(67) 8 4 5 9` — it was a list of facts about
@@ -140,12 +117,23 @@ export class CombosBar {
        * read straight onto the empty cells without counting along the row to
        * work out which ones they were.
        *
-       * A run broken into more than one gap lists the set once, at the first
-       * of them, and marks the rest with a dot. Repeating the set at every gap
-       * was tried and reads as twice as many digits as there are: `_ 9 _ _`
-       * came out `(378) 9 (378)`, which looks like six cells to fill.
+       * That only works while the empty cells are one stretch. Once the run is
+       * broken into several gaps there is no single place the set belongs, and
+       * putting it in the first says something untrue: a 44 across sitting
+       * `_ _ _ 3 _ 2 _ _` came out `(456789) 3 · 2 ·`, which reads as six
+       * digits going into the first three cells. Repeating the set at every
+       * gap is worse — `_ 9 _ _` came out `(378) 9 (378)`, twice as many cells
+       * as there are.
+       *
+       * So a broken run dots every empty cell, which is the one thing that is
+       * certainly true of it, and states the set once at the end. The dots
+       * also carry how wide each gap is, which the first-gap bracket threw
+       * away.
        */
       const toWrite = digitsOf(mask);
+      const spell = (): HTMLElement[] =>
+        toWrite.map((each) => el('em', { class: blocked & bit(each) ? 'blocked' : '', text: String(each) }));
+
       let listed = false;
       for (let i = 0; i < run.cells.length; i++) {
         const digit = game.values[run.cells[i]];
@@ -153,30 +141,23 @@ export class CombosBar {
           chip.append(el('em', { class: 'placed', title: 'already in this run', text: String(digit) }));
           continue;
         }
-
-        // One bracket for the whole gap, however many cells it spans, and only
-        // for the first gap: after that a dot marks the cell without claiming
-        // the same digits go in it too.
-        const gapStart = i === 0 || game.values[run.cells[i - 1]] !== 0;
-        if (!gapStart) continue;
-        if (listed) {
-          chip.append(el('em', { class: 'gap', title: 'also to fill', text: '·' }));
+        if (split) {
+          chip.append(el('em', { class: 'gap', title: 'to fill', text: '·' }));
           continue;
         }
+        // One bracket for the whole gap, however many cells it spans.
+        if (listed) continue;
         listed = true;
         // An untouched run is all gap, so there is nothing for brackets to
         // separate it from and they would only add noise.
         const bracket = used !== 0;
         chip.append(
-          el(
-            'span',
-            { class: 'combo-open' },
-            bracket ? '(' : '',
-            ...toWrite.map((each) =>
-              el('em', { class: blocked & bit(each) ? 'blocked' : '', text: String(each) }),
-            ),
-            bracket ? ')' : '',
-          ),
+          el('span', { class: 'combo-open' }, bracket ? '(' : '', ...spell(), bracket ? ')' : ''),
+        );
+      }
+      if (split) {
+        chip.append(
+          el('span', { class: 'combo-open split' }, el('i', { class: 'combo-eq', text: '=' }), ...spell()),
         );
       }
 
@@ -210,4 +191,72 @@ export class CombosBar {
     );
     return row;
   }
+}
+
+export interface RunState {
+  /** Digits already written into the run. */
+  used: number;
+  /** What the cells still empty have to add up to. */
+  left: number;
+  /** Those cells, in run order. */
+  open: number[];
+  /** What each of them could still take, in the same order. */
+  masks: number[];
+  /** How many separate stretches they form. */
+  gaps: number;
+}
+
+/**
+ * Read a run off the board: what is in it, what is left, and what each empty
+ * cell could still take.
+ *
+ * Kept out of the rendering and exported so it can be tested, because it is
+ * the part that decides which combinations are offered — the display is only
+ * a picture of what this returns.
+ */
+export function runState(game: Game, run: Run): RunState {
+  let used = 0;
+  let left = run.sum;
+  const open: number[] = [];
+  let gaps = 0;
+
+  for (let i = 0; i < run.cells.length; i++) {
+    const at = run.cells[i];
+    const digit = game.values[at];
+    if (digit) {
+      used |= bit(digit);
+      left -= digit;
+      continue;
+    }
+    open.push(at);
+    if (i === 0 || game.values[run.cells[i - 1]] !== 0) gaps++;
+  }
+
+  const masks = open.map((at) => {
+    // Not a digit already in this run, and not one already in the run crossing
+    // this cell.
+    let mask = ALL & ~used;
+    const crossing = run.dir === 'across' ? game.downRun(at) : game.acrossRun(at);
+    if (crossing) {
+      for (const other of crossing.cells) {
+        if (game.values[other]) mask &= ~bit(game.values[other]);
+      }
+    }
+    /*
+     * And not a digit the player has already ruled out here by hand. Pencil
+     * marks are the player's own statement about the cell — `8 9` means they
+     * have worked out it is one of those two — so a combination that needs a 3
+     * there is not on offer, however well it adds up.
+     *
+     * Ignoring them left the strip showing the same dozen sets it showed from
+     * the opening position, long after the player had narrowed the cells down
+     * themselves: the one moment the table has least to say is the one moment
+     * it was saying most. It also cuts the other way — marks that are wrong
+     * can leave a run with nothing that fits, which is worth being told.
+     */
+    if (game.marks[at]) mask &= game.marks[at];
+    return mask;
+  });
+
+  return { used, left, open, masks, gaps };
 }

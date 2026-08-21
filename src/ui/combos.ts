@@ -1,5 +1,5 @@
-import { bit, digitsOf } from '../core/bits.ts';
-import { findCombos } from '../core/combos.ts';
+import { ALL, bit, digitsOf } from '../core/bits.ts';
+import { dealableCombos } from '../core/combos.ts';
 import type { Run } from '../core/types.ts';
 import type { Game } from '../game/state.ts';
 import { clear, el } from './dom.ts';
@@ -90,21 +90,33 @@ export class CombosBar {
     }
 
     /*
-     * A digit no empty cell of this run could take, because the run crossing
-     * each of them already has it. Judged across the whole run: blocked at one
-     * cell is not blocked for the run.
+     * What each empty cell of this run could still take: anything not already
+     * in the run, and not already in the run crossing that cell.
      */
+    const masks = open.map((at) => {
+      const crossing = run.dir === 'across' ? game.downRun(at) : game.acrossRun(at);
+      let mask = ALL & ~used;
+      if (crossing) {
+        for (const other of crossing.cells) {
+          if (game.values[other]) mask &= ~bit(game.values[other]);
+        }
+      }
+      return mask;
+    });
+
+    // A digit nowhere in the run can take is worth dimming where it appears.
     let blocked = 0;
     for (let digit = 1; digit <= 9; digit++) {
-      const fits = open.some((at) => {
-        const crossing = run.dir === 'across' ? game.downRun(at) : game.acrossRun(at);
-        if (!crossing) return true;
-        return !crossing.cells.some((other) => game.values[other] === digit);
-      });
-      if (!fits) blocked |= bit(digit);
+      if (!masks.some((mask) => mask & bit(digit))) blocked |= bit(digit);
     }
 
-    const options = findCombos(open.length, left, 0, used);
+    /*
+     * Only the combinations that can actually be dealt out across these cells.
+     * Listing every set that merely adds up buries the two or three that are
+     * really available under a dozen the board has already ruled out — and a
+     * dozen chips is also what ran the strip off the side of the screen.
+     */
+    const options = dealableCombos(left, masks, 0);
     if (options.length === 0) {
       row.append(el('span', { class: 'combos-note wrong', text: 'nothing fits' }));
       return row;
@@ -118,13 +130,43 @@ export class CombosBar {
         type: 'button',
         title: 'Tap to pencil in · hold to rule out',
       });
-      for (const digit of digitsOf(mask)) {
-        chip.append(
-          el('em', {
-            class: blocked & bit(digit) ? 'blocked' : '',
-            text: String(digit),
-          }),
-        );
+      /*
+       * The whole run's combination, split into the part still to be written
+       * and the part already in: a 26 in four cells holding a 2 and a 7 in its
+       * last two squares reads `(89) *2 *7`.
+       *
+       * Reading it as one merged set asks you to hold in your head which of
+       * those digits you have already dealt with, which is the thing you came
+       * to the table to stop doing. The brackets are what is left to write —
+       * the digits the chip will pencil in if tapped — and the starred ones
+       * are done. An untouched run has nothing to separate, so it is left
+       * plain.
+       */
+      const toWrite = digitsOf(mask);
+      /*
+       * In the order they sit in the run, not in numeric order. A run reading
+       * `_ _ 2 7` on the board shows as `(89) *2 *7`, so the chip lines up
+       * with what is in front of you and the blanks can be read straight onto
+       * the cells they belong to. Sorting these would break that.
+       */
+      const done = run.cells.map((at) => game.values[at]).filter((digit) => digit > 0);
+
+      chip.append(
+        el(
+          'span',
+          { class: 'combo-open' },
+          done.length > 0 ? '(' : '',
+          ...toWrite.map((digit) =>
+            el('em', {
+              class: blocked & bit(digit) ? 'blocked' : '',
+              text: String(digit),
+            }),
+          ),
+          done.length > 0 ? ')' : '',
+        ),
+      );
+      for (const digit of done) {
+        chip.append(el('em', { class: 'placed', title: 'already in this run', text: `*${digit}` }));
       }
 
       let held = false;

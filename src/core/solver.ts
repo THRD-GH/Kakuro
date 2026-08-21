@@ -1,5 +1,5 @@
 import { ALL, bit, digitsOf, listDigits, onlyDigit, popcount } from './bits.ts';
-import { combosFor } from './combos.ts';
+import { combosFor, hasMatching } from './combos.ts';
 import type { Puzzle, Run } from './types.ts';
 
 /**
@@ -91,42 +91,6 @@ interface RunInfo {
 
 /** "the 23 across" — how a clue gets referred to out loud. */
 const clueName = (run: RunInfo): string => `the ${run.sum} ${run.dir}`;
-
-/**
- * A perfect matching between a run's cells and a combination's digits. This is
- * the difference between "these digits add up" and "these digits can actually
- * be written in": 8+9 makes 17, but not if both cells have ruled out the 9.
- *
- * Kuhn's algorithm. Runs are at most nine cells, so the simple version is
- * comfortably fast enough.
- */
-function hasMatching(cellMasks: number[], combo: number): boolean {
-  const digits = digitsOf(combo);
-  const n = digits.length;
-  if (n !== cellMasks.length) return false;
-
-  const owner = new Int8Array(n).fill(-1);
-  const seen = new Uint8Array(n);
-
-  const augment = (cell: number): boolean => {
-    for (let d = 0; d < n; d++) {
-      if (seen[d]) continue;
-      if (!(cellMasks[cell] & bit(digits[d]))) continue;
-      seen[d] = 1;
-      if (owner[d] === -1 || augment(owner[d])) {
-        owner[d] = cell;
-        return true;
-      }
-    }
-    return false;
-  };
-
-  for (let cell = 0; cell < n; cell++) {
-    seen.fill(0);
-    if (!augment(cell)) return false;
-  }
-  return true;
-}
 
 /**
  * The kakuro solver — and the same object behind hints, difficulty rating and

@@ -694,6 +694,9 @@ p {
  * it, which is no use for a table about the cell you are looking at.
  */
 .combos-wrap {
+  /* Never more than this much of the board, whatever it has to say. */
+  max-height: 45%;
+  overflow-y: auto;
   padding: 0.4rem 0.45rem;
   border: 1px solid var(--line);
   border-radius: 0.7rem;
@@ -718,9 +721,15 @@ p {
 
 .combos-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.4rem;
   min-width: 0;
+}
+
+/* The clue and the tally stay on the first line while the chips wrap beside them. */
+.combos-clue,
+.combos-left {
+  margin-top: 0.1rem;
 }
 
 /* The clue, as it is written on the board: total above, direction below. */
@@ -767,18 +776,19 @@ p {
   color: var(--error);
 }
 
-/* One row per run, scrolling sideways rather than wrapping into a block. */
+/*
+ * Wrapped, not scrolled sideways. An empty 16-in-4 really does have eight
+ * combinations, and eight is worth reading as a block — off the side of the
+ * screen they may as well not be there, and a horizontal scroller inside a
+ * strip is a poor thing to work on a phone. The strip grows instead, and the
+ * cap below stops it ever growing far.
+ */
 .combos-options {
   flex: 1 1 auto;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 1px;
-}
-
-.combos-options::-webkit-scrollbar {
-  display: none;
+  min-width: 0;
 }
 
 .combo {
@@ -795,6 +805,20 @@ p {
 
 .combo em {
   font-style: normal;
+}
+
+/* The part still to be written, which is what tapping the chip pencils in. */
+.combo-open {
+  display: inline-flex;
+  gap: 0.1rem;
+}
+
+/* Already written into the run: shown so the combination reads whole, starred
+   so it cannot be mistaken for something still to place. */
+.combo em.placed {
+  color: var(--met);
+  font-weight: 800;
+  margin-left: 0.2rem;
 }
 
 /* A digit with nowhere to go in this run: the combination is still listed,

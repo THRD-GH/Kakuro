@@ -1,4 +1,4 @@
-import { popcount } from './bits.ts';
+import { bit, digitsOf, popcount } from './bits.ts';
 
 /**
  * Every set of distinct digits 1..9, indexed by [size][sum] as 9-bit masks —
@@ -54,4 +54,57 @@ export function combosFor(size: number, sum: number): number[] {
  */
 export function findCombos(size: number, sum: number, include: number, exclude: number): number[] {
   return combosFor(size, sum).filter((m) => (m & include) === include && (m & exclude) === 0);
+}
+
+/**
+ * A perfect matching between a run's cells and a combination's digits. This is
+ * the difference between "these digits add up" and "these digits can actually
+ * be written in": 8+9 makes 17, but not if both cells have ruled out the 9.
+ *
+ * Kuhn's algorithm. Runs are at most nine cells, so the simple version is
+ * comfortably fast enough.
+ */
+export function hasMatching(cellMasks: number[], combo: number): boolean {
+  const digits = digitsOf(combo);
+  const n = digits.length;
+  if (n !== cellMasks.length) return false;
+
+  const owner = new Int8Array(n).fill(-1);
+  const seen = new Uint8Array(n);
+
+  const augment = (cell: number): boolean => {
+    for (let d = 0; d < n; d++) {
+      if (seen[d]) continue;
+      if (!(cellMasks[cell] & bit(digits[d]))) continue;
+      seen[d] = 1;
+      if (owner[d] === -1 || augment(owner[d])) {
+        owner[d] = cell;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  for (let cell = 0; cell < n; cell++) {
+    seen.fill(0);
+    if (!augment(cell)) return false;
+  }
+  return true;
+}
+
+/**
+ * The combinations that can actually be written into a run, given what each of
+ * its empty cells could still take.
+ *
+ * `findCombos` answers an arithmetic question — which sets of digits add up —
+ * and the board has usually ruled out most of them already. A combination
+ * needing a 7 is no use if every empty cell in the run crosses a run that
+ * already has one, and listing it only buries the two or three that are real.
+ * This is the same matching test the solver uses, so what the player is shown
+ * is exactly what the game itself believes is still possible.
+ */
+export function dealableCombos(sum: number, cellMasks: number[], exclude: number): number[] {
+  return combosFor(cellMasks.length, sum).filter(
+    (combo) => (combo & exclude) === 0 && hasMatching(cellMasks, combo),
+  );
 }

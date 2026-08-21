@@ -46,12 +46,17 @@ under the size a thumb can hit. Large and Huge boards therefore open zoomed on
 a narrow screen, scrolling inside their pane with the cursor kept in view.
 
 **The table** is a strip over the foot of the board showing what can still go
-in the cell you are on — both clues through it at once, with the digits already
-written taken out of the total and out of the alphabet, so a 23 across with a 6
-in it lists the ways to make 17 in the cells that are left. It follows the
-cursor as you move, tap a combination to pencil it into the run, hold one to
-rule it out, and Table folds it away. It is read against the grid, so it never
-covers it: about a tenth of the screen against the board's half.
+in the cell you are on, both clues through it at once. A combination reads as
+the part still to be written, then the part already in — a 26 in four cells
+holding a 2 and a 7 in its last two squares shows as `(89) *2 *7`, with the
+starred digits in board order, so the brackets can be read straight onto the
+empty cells. It follows the cursor, tap a combination to pencil it into the
+run, hold one to rule it out, and Table folds it away.
+
+Only combinations that can actually be *dealt out* are listed — the same
+matching test the solver uses — so a set needing a 7 is dropped when every
+empty cell of the run crosses a run that already has one. That is both more
+useful and much shorter than listing everything that merely adds up.
 
 **Hint** names the technique that cracks the position, explains why it works
 and tints the cells it is talking about; it only writes the digit in if asked.

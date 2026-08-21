@@ -131,41 +131,53 @@ export class CombosBar {
         title: 'Tap to pencil in · hold to rule out',
       });
       /*
-       * The whole run's combination, split into the part still to be written
-       * and the part already in: a 26 in four cells holding a 2 and a 7 in its
-       * last two squares reads `(89) 2 7`, with the 2 and the 7 in bold.
+       * The run as it sits on the board: the digits already written, in their
+       * places, and the ones still to come bracketed in the gap they go in.
+       * A 39 across reading `8 4 _ _ 5 9` shows as `8 4 (67) 5 9`.
        *
-       * Reading it as one merged set asks you to hold in your head which of
-       * those digits you have already dealt with, which is the thing you came
-       * to the table to stop doing. The brackets are what is left to write —
-       * the digits the chip will pencil in if tapped — and the bold ones are
-       * done. An untouched run has nothing to separate, so it is left plain.
+       * Collected at the front — `(67) 8 4 5 9` — it was a list of facts about
+       * the run. In place it is a picture of the run, and the brackets can be
+       * read straight onto the empty cells without counting along the row to
+       * work out which ones they were.
+       *
+       * A run broken into more than one gap lists the set once, at the first
+       * of them, and marks the rest with a dot. Repeating the set at every gap
+       * was tried and reads as twice as many digits as there are: `_ 9 _ _`
+       * came out `(378) 9 (378)`, which looks like six cells to fill.
        */
       const toWrite = digitsOf(mask);
-      /*
-       * In the order they sit in the run, not in numeric order. A run reading
-       * `_ _ 2 7` on the board shows as `(89) *2 *7`, so the chip lines up
-       * with what is in front of you and the blanks can be read straight onto
-       * the cells they belong to. Sorting these would break that.
-       */
-      const done = run.cells.map((at) => game.values[at]).filter((digit) => digit > 0);
+      let listed = false;
+      for (let i = 0; i < run.cells.length; i++) {
+        const digit = game.values[run.cells[i]];
+        if (digit) {
+          chip.append(el('em', { class: 'placed', title: 'already in this run', text: String(digit) }));
+          continue;
+        }
 
-      chip.append(
-        el(
-          'span',
-          { class: 'combo-open' },
-          done.length > 0 ? '(' : '',
-          ...toWrite.map((digit) =>
-            el('em', {
-              class: blocked & bit(digit) ? 'blocked' : '',
-              text: String(digit),
-            }),
+        // One bracket for the whole gap, however many cells it spans, and only
+        // for the first gap: after that a dot marks the cell without claiming
+        // the same digits go in it too.
+        const gapStart = i === 0 || game.values[run.cells[i - 1]] !== 0;
+        if (!gapStart) continue;
+        if (listed) {
+          chip.append(el('em', { class: 'gap', title: 'also to fill', text: '·' }));
+          continue;
+        }
+        listed = true;
+        // An untouched run is all gap, so there is nothing for brackets to
+        // separate it from and they would only add noise.
+        const bracket = used !== 0;
+        chip.append(
+          el(
+            'span',
+            { class: 'combo-open' },
+            bracket ? '(' : '',
+            ...toWrite.map((each) =>
+              el('em', { class: blocked & bit(each) ? 'blocked' : '', text: String(each) }),
+            ),
+            bracket ? ')' : '',
           ),
-          done.length > 0 ? ')' : '',
-        ),
-      );
-      for (const digit of done) {
-        chip.append(el('em', { class: 'placed', title: 'already in this run', text: String(digit) }));
+        );
       }
 
       let held = false;

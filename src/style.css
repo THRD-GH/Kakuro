@@ -860,6 +860,12 @@ p {
   margin-left: 0.25rem;
 }
 
+/* Another gap in the same run, filled from the same set listed once above. */
+.combo em.gap {
+  color: var(--dim);
+  margin-left: 0.25rem;
+}
+
 /* A digit with nowhere to go in this run: the combination is still listed,
    because the block may lift, but it is not the one to reach for. */
 .combo em.blocked {

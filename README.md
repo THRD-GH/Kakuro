@@ -50,11 +50,12 @@ bar also reserves its own height under the board, so the bottom row can always
 be scrolled clear of it.
 
 **The table** is a strip over the foot of the board showing what can still go
-in the cell you are on, both clues through it at once. A combination reads as
-the part still to be written, then the part already in — a 26 in four cells
-holding a 2 and a 7 in its last two squares shows as `(89) 2 7`, the placed
-digits bold and in board order, so the brackets can be read straight onto the
-empty cells. It follows the cursor, tap a combination to pencil it into the
+in the cell you are on, both clues through it at once. A combination reads as the run
+itself: the digits already written, in their places, and the ones still to come
+bracketed in the gap they go in. A 39 across reading `8 4 _ _ 5 9` shows as
+`8 4 (67) 5 9`, so the bracket can be read straight onto the cells it belongs
+to without counting along the row. A run split into more than one gap lists the
+set once and marks the other gaps with a dot. It follows the cursor, tap a combination to pencil it into the
 run, hold one to rule it out, and Table folds it away.
 
 Only combinations that can actually be *dealt out* are listed — the same

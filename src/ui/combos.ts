@@ -214,7 +214,7 @@ export interface RunState {
  * the part that decides which combinations are offered — the display is only
  * a picture of what this returns.
  */
-export function runState(game: Game, run: Run): RunState {
+export function runState(game: Game, run: Run, respectMarks = true): RunState {
   let used = 0;
   let left = run.sum;
   const open: number[] = [];
@@ -254,9 +254,54 @@ export function runState(game: Game, run: Run): RunState {
      * it was saying most. It also cuts the other way — marks that are wrong
      * can leave a run with nothing that fits, which is worth being told.
      */
-    if (game.marks[at]) mask &= game.marks[at];
+    if (respectMarks && game.marks[at]) mask &= game.marks[at];
     return mask;
   });
 
   return { used, left, open, masks, gaps };
+}
+
+/**
+ * What the table would say about every cell at once — which is what Marks
+ * pencils in.
+ *
+ * The point is the ceiling. This runs the bookkeeping *once* and never writes
+ * a digit: for each run, the combinations that can still be dealt out across
+ * its empty cells, unioned, and each cell given what both of its runs allow.
+ * A cell left with one candidate is a naked single the player can see, which
+ * is what pencil marks are for.
+ *
+ * What it must not do is think. Marks used to hand the grid to the technique
+ * solver and run the cheap rules to a standstill — which places digits, and
+ * placing digits feeds the next sweep. On an easy puzzle that is the whole
+ * solve: every cell came back with exactly one candidate, so one tap wrote
+ * the answer into all of them in pencil. A back door, and a well-signposted
+ * one.
+ *
+ * The rule it keeps to now is that Marks may not tell you anything the table
+ * would not have told you cell by cell. It saves the writing, not the
+ * reasoning.
+ */
+export function fillCandidates(game: Game): number[] {
+  const out = new Array<number>(game.values.length).fill(0);
+  const seen = new Array<boolean>(game.values.length).fill(false);
+
+  for (const run of game.puzzle.runs) {
+    // Not `respectMarks`: this is what replaces the marks, so reading them
+    // first would only ever let it narrow what is already written down.
+    const { left, open, masks } = runState(game, run, false);
+    let union = 0;
+    for (const combo of dealableCombos(left, masks, 0)) union |= combo;
+
+    for (let i = 0; i < open.length; i++) {
+      const cell = open[i];
+      // A cell is in two runs and has to satisfy both, so the second one it
+      // is reached from narrows what the first allowed.
+      const allowed = masks[i] & union;
+      out[cell] = seen[cell] ? out[cell] & allowed : allowed;
+      seen[cell] = true;
+    }
+  }
+
+  return out;
 }

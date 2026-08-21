@@ -3,11 +3,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { bit, digitsOf } from '../src/core/bits.ts';
+import { bit, digitsOf, popcount } from '../src/core/bits.ts';
 import { dealableCombos } from '../src/core/combos.ts';
 import { generatePuzzle } from '../src/core/generator.ts';
 import { Game } from '../src/game/state.ts';
-import { runState } from '../src/ui/combos.ts';
+import { fillCandidates, runState } from '../src/ui/combos.ts';
 
 const id = { size: 9, level: 1, number: 1 } as const;
 const puzzle = generatePuzzle(id);
@@ -79,4 +79,57 @@ test('a written digit is out of the alphabet and out of the total', () => {
   assert.equal(state.left, run.sum - digit);
   assert.equal(state.open.length, run.cells.length - 1);
   for (const mask of state.masks) assert.equal(mask & bit(digit), 0);
+});
+
+/*
+ * Marks pencils in what the table would say about every cell at once. Two
+ * things have to hold: it must never rub out the right digit, and it must not
+ * be a solve button. It was one — filling from the technique solver run to a
+ * standstill returned a single, correct candidate for every empty cell of an
+ * easy grid, so one tap wrote the whole answer in pencil.
+ */
+test('filled marks never rule out the true answer', () => {
+  for (const level of [1, 3, 6]) {
+    const id = { size: 9, level, number: 4 } as const;
+    const grid = generatePuzzle(id);
+    const game = new Game(id, grid);
+    const filled = fillCandidates(game);
+
+    for (let cell = 0; cell < grid.solution.length; cell++) {
+      const answer = grid.solution[cell];
+      if (answer === 0) continue;
+      assert.ok(filled[cell] & bit(answer), `level ${level}, cell ${cell} lost its ${answer}`);
+    }
+  }
+});
+
+test('filling the marks does not hand over the grid', () => {
+  for (const level of [1, 2, 3]) {
+    const id = { size: 9, level, number: 4 } as const;
+    const grid = generatePuzzle(id);
+    const game = new Game(id, grid);
+    const filled = fillCandidates(game);
+
+    const empty = grid.solution.map((d, i) => (d > 0 ? i : -1)).filter((i) => i >= 0);
+    const settled = empty.filter((cell) => popcount(filled[cell]) === 1).length;
+
+    // A few naked singles are the point of pencil marks. A gridful is a back
+    // door — the old version returned every cell, every time.
+    assert.ok(
+      settled < empty.length / 2,
+      `level ${level}: ${settled} of ${empty.length} cells came back already decided`,
+    );
+  }
+});
+
+test('marks already on the board never narrow the fill', () => {
+  const id = { size: 9, level: 2, number: 4 } as const;
+  const grid = generatePuzzle(id);
+  const game = new Game(id, grid);
+  const before = fillCandidates(game);
+
+  // A wrong mark left in a cell must not survive into what Marks writes.
+  const cell = grid.solution.findIndex((d) => d > 0);
+  game.pencilInto([cell], bit(grid.solution[cell] === 9 ? 8 : 9));
+  assert.deepEqual(fillCandidates(game), before);
 });

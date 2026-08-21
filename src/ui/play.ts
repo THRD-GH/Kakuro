@@ -1,4 +1,3 @@
-import { ALL } from '../core/bits.ts';
 import { Solver, TECHNIQUE_NAMES } from '../core/solver.ts';
 import type { Step } from '../core/solver.ts';
 import { displayPuzzleId } from '../core/types.ts';
@@ -9,7 +8,7 @@ import { dropSave, puzzleLink, putSave, recordFinish, recordStart, saveSettings 
 import type { AppContext } from './app-context.ts';
 import { pauseIcon, playIcon, redoIcon, undoIcon, zoomIcon } from './icons.ts';
 import { Board } from './board.ts';
-import { CombosBar } from './combos.ts';
+import { CombosBar, fillCandidates } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
 import { bindPan, bindTap } from './pointer.ts';
 import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
@@ -711,9 +710,8 @@ export class PlayScreen {
   }
 
   private fillMarks(): void {
-    const solver = new Solver(this.game.puzzle, this.game.values);
-    solver.propagate(false);
-    const changed = this.game.fillMarks((cell) => (solver.masks[cell] === 0 ? ALL : solver.masks[cell]));
+    const candidates = fillCandidates(this.game);
+    const changed = this.game.fillMarks((cell) => candidates[cell]);
     if (!changed) {
       toast('Every empty cell already has its marks.');
       return;

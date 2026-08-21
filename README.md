@@ -132,6 +132,20 @@ moment it was saying most. It cuts the other way as well, and that is the point:
 marks that cannot be right leave the run with *nothing that fits*, which is
 worth being told before the rest of the grid is built on them.
 
+**Marks** pencils that same reading into every cell at once — and the rule it
+keeps to is that it may not tell you anything the table would not have told
+you cell by cell. It runs the bookkeeping once and never writes a digit: for
+each run, the combinations that can still be dealt out, unioned, and each cell
+given what both of its runs allow. A cell left with one candidate is a naked
+single you can see for yourself, which is what pencil marks are for.
+
+It was a back door before that. Filling from the technique solver run to a
+standstill *places* digits, and placed digits feed the next sweep, so on an
+easy grid one tap wrote the entire answer in pencil — measured across the
+board sizes, 100% of empty cells came back with a single correct candidate at
+white belt, and 70–93% at black. One pass leaves 3–15%. `node tools/marks.ts`
+prints that table.
+
 **Hint** names the technique that cracks the position, explains why it works
 and tints the cells it is talking about; it only writes the digit in if asked.
 Pressing it again walks another step down the same line of reasoning rather
@@ -244,7 +258,8 @@ Two things make it fast enough to run in a worker:
 Levels come out in tens to hundreds of milliseconds. `node tools/matrix.ts`
 prints which size-and-level pairs are reachable, `node tools/density.ts` the
 black ratio each board wants, `node tools/effort.ts` the spread the level bands
-are cut from, and `node tools/prof.ts` where the time goes.
+are cut from, `node tools/marks.ts` how much of the answer the Marks key gives
+away, and `node tools/prof.ts` where the time goes.
 
 ## Commands
 

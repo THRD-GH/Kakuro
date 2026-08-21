@@ -141,8 +141,9 @@ class App implements AppContext {
         this.syncGuard();
         this.applyWakeLock();
 
-        // The next puzzle at this level is very often what happens next.
-        prefetch({ ...id, number: id.number + 1 });
+        // Whichever one this level will hand out next, started now so the
+        // worker has it ready rather than the player waiting for it.
+        this.queueNext(id.size, id.level, id.number);
       })
       .catch((error: unknown) => {
         toast(error instanceof Error ? error.message : 'That puzzle could not be opened');
@@ -162,13 +163,48 @@ class App implements AppContext {
     this.goMenu();
   }
 
+  /**
+   * Which number each board and level will hand out next.
+   *
+   * Chosen when the last one was opened rather than when this one is asked
+   * for, which is what lets the worker have it built before anybody wants it.
+   * A 20x20 takes seconds to search out, and seconds spent watching a spinner
+   * are seconds the player did not ask to spend.
+   *
+   * The old prefetch warmed `number + 1`, which `playRandom` then had about a
+   * one in five hundred chance of asking for — it picks at random from every
+   * number still unplayed. Warming a puzzle nobody goes on to open is worse
+   * than not warming one at all: it is the same wait, with the worker busy.
+   */
+  private onDeck = new Map<string, number>();
+
   playRandom(level: Level): void {
     const size = this.size;
-    const unplayed = unplayedNumbers(this.history, { size, level }, this.poolSize);
-    const from =
-      unplayed.length > 0 ? unplayed : Array.from({ length: this.poolSize }, (_, i) => i + 1);
-    const number = from[Math.floor(Math.random() * from.length)];
+    const key = `${size}-${level}`;
+    const from = this.choosableNumbers(size, level);
+    const waiting = this.onDeck.get(key);
+    // Only if it is still a legitimate choice — the history may have moved.
+    const number =
+      waiting !== undefined && from.includes(waiting)
+        ? waiting
+        : from[Math.floor(Math.random() * from.length)];
+    this.onDeck.delete(key);
     this.playPuzzle({ size, level, number });
+  }
+
+  /** Unplayed numbers, or all of them once the level has been finished off. */
+  private choosableNumbers(size: Size, level: Level): number[] {
+    const unplayed = unplayedNumbers(this.history, { size, level }, this.poolSize);
+    return unplayed.length > 0 ? unplayed : Array.from({ length: this.poolSize }, (_, i) => i + 1);
+  }
+
+  /** Pick the one after this, and set the worker on it. */
+  private queueNext(size: Size, level: Level, just: number): void {
+    const rest = this.choosableNumbers(size, level).filter((number) => number !== just);
+    if (rest.length === 0) return;
+    const next = rest[Math.floor(Math.random() * rest.length)];
+    this.onDeck.set(`${size}-${level}`, next);
+    prefetch({ size, level, number: next });
   }
 
   // ----------------------------------------------------------------- settings

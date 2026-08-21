@@ -175,7 +175,8 @@ function judge(size: number, values: number[], wanted: number, targetLevel: Leve
     return { cost: 200 + stuck.length, rating: 100, level: 6, blame: stuck, shake: 0.5 };
   }
 
-  const scored = measure(puzzle);
+  // The solve just done, rather than an identical one from a fresh solver.
+  const scored = measure(puzzle, result);
   const level = classify(scored.rating, size);
   const cost = Math.abs(scored.rating - wanted);
 

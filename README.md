@@ -297,11 +297,47 @@ Two things make it fast enough to run in a worker:
   combination matching over a grid that is nowhere near being a puzzle is
   expensive work to reach a conclusion that was already clear.
 
+**Speed matters most on the big boards**, which are the interesting ones, and
+they were the slow ones: a 20×20 level 3 averaged 4.1 seconds and reached 7.8.
+Three things, none of which moved a single puzzle — `node tools/snapshot.ts`
+fingerprints 120 grids across every board and level, and it is the same before
+and after.
+
+- **A run that has not moved is not swept again.** A combination sweep reads
+  nothing but its own run's cells, so a run untouched since that sweep last
+  looked at it cannot answer differently. On a 20×20 there are two hundred
+  runs and a sweep that changes anything usually changes one. Cleared *before*
+  the work rather than after, so a run this sweep does change marks itself and
+  gets its next look, exactly as when every run was swept every time.
+- **`live()` stopped recomputing what it was handed.** Every caller reads the
+  run's state to decide whether to ask at all, and `live` then read it again —
+  a second walk and a second array per run, per sweep, on every grid judged.
+- **`measure()` takes the solve the caller already did.** Judging a grid means
+  solving it to see whether it is a puzzle and measuring it to see how hard,
+  and the measure solved it again from a fresh solver.
+
+89.2s → 61.7s over those 120 grids; the worst 20×20 went 7.8s to 5.3s. One
+thing tried and reverted: packing the per-sweep flags into one buffer of
+`subarray` views cost 43%, which is more than the sweeps themselves saved.
+
+That still leaves seconds on a Huge board, so **the next puzzle is chosen when
+the last one opens** rather than when it is asked for, and the worker builds it
+while you play. There was already a prefetch, warming `number + 1` — which
+`playRandom` had about a one in five hundred chance of asking for, since it
+picks at random from every number still unplayed. Warming a puzzle nobody opens
+is worse than warming none: the same wait, with the worker busy. Now the choice
+is made first and prefetched, so the second Huge puzzle of a sitting opens at
+once and the third is already building.
+
 Levels come out in tens to hundreds of milliseconds. `node tools/matrix.ts`
 prints which size-and-level pairs are reachable, `node tools/density.ts` the
 black ratio each board wants, `node tools/effort.ts` the spread the level bands
 are cut from, `node tools/marks.ts` how much of the answer the Marks key gives
-away, and `node tools/prof.ts` where the time goes.
+away, `node tools/pool.ts` what generating past the current pool costs,
+`node tools/snapshot.ts` a fingerprint of what the generator produces — so a
+change meant to be a speed-up can be proved not to have moved a puzzle — and
+`node tools/prof.ts` where the time goes. `node --prof tools/one.ts 20 3 158`
+profiles a single grid.
 
 ## Commands
 

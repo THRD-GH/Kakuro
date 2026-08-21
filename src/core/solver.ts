@@ -100,6 +100,15 @@ const clueName = (run: RunInfo): string => `the ${run.sum} ${run.dir}`;
  * after every deduction, so the step it reports is always the easiest one
  * available. That is the only kind of hint worth giving.
  */
+/**
+ * Sweeps whose answer depends on nothing but the run in front of them, and so
+ * can be skipped for a run that has not moved. Sum difference is not among
+ * them: it reads a run against its neighbours, so a run standing still is no
+ * guarantee its answer has.
+ */
+const SWEEP = { combos: 0, combosDeep: 1, hidden: 2, hiddenDeep: 3, matching: 4 } as const;
+const SWEEPS = 5;
+
 export class Solver {
   readonly size: number;
   readonly masks: Int16Array;
@@ -109,6 +118,20 @@ export class Solver {
   readonly white: number[];
 
   private solved: Uint8Array;
+  /*
+   * Which runs might still have something to say, per sweep.
+   *
+   * A combination sweep reads nothing but the run's own cells, so a run whose
+   * cells have not moved since that sweep last looked at it cannot produce a
+   * different answer this time. On a 20x20 there are two hundred runs and a
+   * sweep that changes anything usually changes one of them, so nearly all of
+   * that work was being redone to reach the same conclusion.
+   *
+   * One set per sweep, because they ask different questions of the same run
+   * and a run answered by one still owes the others. Only the sweeps that
+   * read nothing but their own run are gated this way.
+   */
+  private fresh: Uint8Array[];
   /** Set when a deduction empties a cell — the position is impossible. */
   broken = false;
 
@@ -133,6 +156,9 @@ export class Solver {
       for (const cell of run.cells) (run.dir === 'across' ? this.acrossOf : this.downOf)[cell] = i;
     });
 
+    // Before `place` can run: it marks runs through these.
+    this.fresh = Array.from({ length: SWEEPS }, () => new Uint8Array(this.runs.length).fill(1));
+
     for (let i = 0; i < n; i++) {
       if (this.acrossOf[i] < 0 && this.downOf[i] < 0) continue;
       this.masks[i] = ALL;
@@ -153,19 +179,34 @@ export class Solver {
   place(cell: number, digit: number): void {
     this.masks[cell] = bit(digit);
     this.solved[cell] = 1;
+    this.touch(cell);
     for (const runIndex of [this.acrossOf[cell], this.downOf[cell]]) {
       if (runIndex < 0) continue;
       for (const other of this.runs[runIndex].cells) {
         if (other === cell) continue;
-        this.masks[other] &= ~bit(digit);
+        const before = this.masks[other];
+        this.masks[other] = before & ~bit(digit);
+        if (this.masks[other] !== before) this.touch(other);
         if (this.masks[other] === 0) this.broken = true;
       }
     }
   }
 
   private cut(cell: number, remove: number): void {
-    this.masks[cell] &= ~remove;
+    const before = this.masks[cell];
+    this.masks[cell] = before & ~remove;
+    if (this.masks[cell] !== before) this.touch(cell);
     if (this.masks[cell] === 0) this.broken = true;
+  }
+
+  /** This cell moved, so both runs through it owe every sweep another look. */
+  private touch(cell: number): void {
+    const across = this.acrossOf[cell];
+    const down = this.downOf[cell];
+    for (const set of this.fresh) {
+      if (across >= 0) set[across] = 1;
+      if (down >= 0) set[down] = 1;
+    }
   }
 
   private digitAt(cell: number): number {
@@ -209,8 +250,13 @@ export class Solver {
    * to go. `deep` adds the matching test, which is where this stops being
    * arithmetic and starts being solving.
    */
-  private live(run: RunInfo, deep: boolean): number[] {
-    const { fixed, open } = this.state(run);
+  private live(run: RunInfo, deep: boolean, known?: { fixed: number; open: number[] }): number[] {
+    /*
+     * Every caller has just read the run's state to decide whether to ask this
+     * at all, and this read it again — a second walk of the run and a second
+     * array, per run, per sweep, on every grid the generator judges.
+     */
+    const { fixed, open } = known ?? this.state(run);
     const masks = open.map((cell) => this.masks[cell]);
 
     return run.combos.filter((combo) => {
@@ -245,6 +291,9 @@ export class Solver {
     Object.assign(copy, this);
     (copy as { masks: Int16Array }).masks = Int16Array.from(this.masks);
     copy.solved = Uint8Array.from(this.solved);
+    // `Object.assign` copied the references, and a branch that marks a run
+    // would otherwise mark it on the trunk as well.
+    copy.fresh = this.fresh.map((set) => Uint8Array.from(set));
     copy.broken = this.broken;
     return copy;
   }
@@ -260,7 +309,7 @@ export class Solver {
         continue;
       }
 
-      const live = this.live(run, deep);
+      const live = this.live(run, deep, { fixed, open });
       if (live.length === 0) {
         this.broken = true;
         return null;
@@ -341,7 +390,7 @@ export class Solver {
         continue;
       }
 
-      const live = this.live(run, deep);
+      const live = this.live(run, deep, { fixed, open });
       if (live.length === 0) {
         this.broken = true;
         return null;
@@ -386,7 +435,7 @@ export class Solver {
       }
       if (open.length < 2) continue;
 
-      const live = this.live(run, true);
+      const live = this.live(run, true, { fixed, open });
       if (live.length === 0) {
         this.broken = true;
         return null;
@@ -592,7 +641,7 @@ export class Solver {
           continue;
         }
 
-        const live = this.live(run, deep);
+        const live = this.live(run, deep, { fixed, open });
         if (live.length === 0) {
           this.broken = true;
           return false;
@@ -655,14 +704,23 @@ export class Solver {
   /** Narrow every run to the digits its surviving combinations use. */
   private sweepCombinations(deep: boolean): number {
     let weight = 0;
-    for (const run of this.runs) {
+    const fresh = this.fresh[deep ? SWEEP.combosDeep : SWEEP.combos];
+    for (let index = 0; index < this.runs.length; index++) {
+      if (!fresh[index]) continue;
+      const run = this.runs[index];
+      /*
+       * Cleared before the work, not after. Anything this sweep cuts marks
+       * the run again through `touch`, which is what gives a run that changed
+       * its next look — exactly as when every run was swept every time.
+       */
+      fresh[index] = 0;
       const { fixed, open, left } = this.state(run);
       if (this.completed(open, left)) {
         if (this.broken) return -1;
         continue;
       }
 
-      const live = this.live(run, deep);
+      const live = this.live(run, deep, { fixed, open });
       if (live.length === 0) {
         this.broken = true;
         return -1;
@@ -703,14 +761,18 @@ export class Solver {
 
   private sweepHiddenSingles(deep: boolean): number {
     let weight = 0;
-    for (const run of this.runs) {
+    const fresh = this.fresh[deep ? SWEEP.hiddenDeep : SWEEP.hidden];
+    for (let index = 0; index < this.runs.length; index++) {
+      if (!fresh[index]) continue;
+      const run = this.runs[index];
+      fresh[index] = 0;
       const { fixed, open, left } = this.state(run);
       if (this.completed(open, left)) {
         if (this.broken) return -1;
         continue;
       }
 
-      const live = this.live(run, deep);
+      const live = this.live(run, deep, { fixed, open });
       if (live.length === 0) {
         this.broken = true;
         return -1;
@@ -733,7 +795,11 @@ export class Solver {
 
   private sweepMatching(): number {
     let weight = 0;
-    for (const run of this.runs) {
+    const fresh = this.fresh[SWEEP.matching];
+    for (let index = 0; index < this.runs.length; index++) {
+      if (!fresh[index]) continue;
+      const run = this.runs[index];
+      fresh[index] = 0;
       const { fixed, open, left } = this.state(run);
       if (this.completed(open, left)) {
         if (this.broken) return -1;
@@ -741,7 +807,7 @@ export class Solver {
       }
       if (open.length < 2) continue;
 
-      const live = this.live(run, true);
+      const live = this.live(run, true, { fixed, open });
       if (live.length === 0) {
         this.broken = true;
         return -1;
@@ -889,8 +955,21 @@ function shareScale(size: number, rung: number): number {
   return rungs[nearest];
 }
 
-export function measure(puzzle: Puzzle): { solved: boolean; hardest: Technique | null; share: number; rating: number } {
-  const full = new Solver(puzzle).grind();
+export function measure(
+  puzzle: Puzzle,
+  /*
+   * The full solve, when the caller has already done it.
+   *
+   * The generator judges thousands of grids per puzzle, and judging one means
+   * solving it to see whether it is a puzzle at all and then measuring it to
+   * see how hard — which solved it a second time, identically, from a fresh
+   * solver. The ladder only ever removes candidates that cannot be right, so
+   * its fixpoint does not depend on the order the rungs were climbed in, and
+   * the second solve could only ever agree with the first.
+   */
+  precomputed?: GrindResult,
+): { solved: boolean; hardest: Technique | null; share: number; rating: number } {
+  const full = precomputed ?? new Solver(puzzle).grind();
   const white = puzzle.solution.reduce((n, digit) => n + (digit ? 1 : 0), 0);
   if (!full.solved) return { solved: false, hardest: full.hardest, share: 0, rating: 100 };
 

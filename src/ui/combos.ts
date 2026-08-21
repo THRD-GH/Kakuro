@@ -161,6 +161,20 @@ export class CombosBar {
         );
       }
 
+      /*
+       * Tap pencils the combination in, hold rules it out.
+       *
+       * The hold marks the chip where it stands rather than repainting the
+       * strip, and that is the whole point of it. Repainting threw away every
+       * chip in the row while the finger was still down, so the release
+       * landed on a *freshly built* chip — a different object, with its own
+       * `held` still false — and pencilled that combination into the run.
+       * Holding a moment too long wrote the digits in and took the rest of
+       * the list with them, since the board had changed under it.
+       *
+       * `this.struck` is what a later repaint reads, so the mark survives one
+       * even though nothing is rebuilt here.
+       */
       let held = false;
       let timer: number | undefined;
       chip.addEventListener('pointerdown', () => {
@@ -172,7 +186,7 @@ export class CombosBar {
           if (set.has(mask)) set.delete(mask);
           else set.add(mask);
           this.struck.set(key, set);
-          this.paint();
+          chip.classList.toggle('struck', set.has(mask));
         }, 400);
       });
       const stop = (): void => window.clearTimeout(timer);

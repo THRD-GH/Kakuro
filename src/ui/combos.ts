@@ -176,8 +176,10 @@ export class CombosBar {
        * even though nothing is rebuilt here.
        */
       let held = false;
+      let pressed = false;
       let timer: number | undefined;
       chip.addEventListener('pointerdown', () => {
+        pressed = true;
         held = false;
         timer = window.setTimeout(() => {
           held = true;
@@ -189,12 +191,30 @@ export class CombosBar {
           chip.classList.toggle('struck', set.has(mask));
         }, 400);
       });
-      const stop = (): void => window.clearTimeout(timer);
+      const stop = (): void => {
+        window.clearTimeout(timer);
+        pressed = false;
+      };
       chip.addEventListener('pointerleave', stop);
       chip.addEventListener('pointercancel', stop);
+      /*
+       * Only the chip that was pressed acts on the release.
+       *
+       * A finger that lands on one chip and slides onto another before lifting
+       * sends the `pointerup` to the second — which had no `pointerdown` of
+       * its own, so it read the lift as a tap and pencilled in a combination
+       * nobody chose. The chips sit a quarter of an inch apart on a phone.
+       *
+       * This is what `bindTap` gets right for the rest of the app, where a
+       * release on a target that did not see the press is dropped unless the
+       * caller asked for drift to be forgiven — right for the grid, where a
+       * hurried tap that slides a pixel is still plainly a tap, and wrong
+       * here, where the two chips mean different things.
+       */
       chip.addEventListener('pointerup', () => {
+        const mine = pressed;
         stop();
-        if (!held) this.onPencil(run, mask);
+        if (!held && mine) this.onPencil(run, mask);
       });
       list.append(chip);
     }

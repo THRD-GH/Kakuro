@@ -133,14 +133,13 @@ export class CombosBar {
       /*
        * The whole run's combination, split into the part still to be written
        * and the part already in: a 26 in four cells holding a 2 and a 7 in its
-       * last two squares reads `(89) *2 *7`.
+       * last two squares reads `(89) 2 7`, with the 2 and the 7 in bold.
        *
        * Reading it as one merged set asks you to hold in your head which of
        * those digits you have already dealt with, which is the thing you came
        * to the table to stop doing. The brackets are what is left to write —
-       * the digits the chip will pencil in if tapped — and the starred ones
-       * are done. An untouched run has nothing to separate, so it is left
-       * plain.
+       * the digits the chip will pencil in if tapped — and the bold ones are
+       * done. An untouched run has nothing to separate, so it is left plain.
        */
       const toWrite = digitsOf(mask);
       /*
@@ -166,7 +165,7 @@ export class CombosBar {
         ),
       );
       for (const digit of done) {
-        chip.append(el('em', { class: 'placed', title: 'already in this run', text: `*${digit}` }));
+        chip.append(el('em', { class: 'placed', title: 'already in this run', text: String(digit) }));
       }
 
       let held = false;

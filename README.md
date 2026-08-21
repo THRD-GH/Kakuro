@@ -48,8 +48,8 @@ a narrow screen, scrolling inside their pane with the cursor kept in view.
 **The table** is a strip over the foot of the board showing what can still go
 in the cell you are on, both clues through it at once. A combination reads as
 the part still to be written, then the part already in — a 26 in four cells
-holding a 2 and a 7 in its last two squares shows as `(89) *2 *7`, with the
-starred digits in board order, so the brackets can be read straight onto the
+holding a 2 and a 7 in its last two squares shows as `(89) 2 7`, the placed
+digits bold and in board order, so the brackets can be read straight onto the
 empty cells. It follows the cursor, tap a combination to pencil it into the
 run, hold one to rule it out, and Table folds it away.
 

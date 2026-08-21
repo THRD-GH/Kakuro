@@ -813,12 +813,12 @@ p {
   gap: 0.1rem;
 }
 
-/* Already written into the run: shown so the combination reads whole, starred
+/* Already written into the run: shown so the combination reads whole, and bold
    so it cannot be mistaken for something still to place. */
 .combo em.placed {
   color: var(--met);
   font-weight: 800;
-  margin-left: 0.2rem;
+  margin-left: 0.25rem;
 }
 
 /* A digit with nowhere to go in this run: the combination is still listed,

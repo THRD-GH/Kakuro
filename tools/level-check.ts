@@ -26,7 +26,7 @@ for (const level of LEVELS as Level[]) {
   for (let number = 1; number <= per; number++) {
     const puzzle = generatePuzzle({ size, level, number });
     const ground = new Solver(puzzle).grind();
-    const measured = classify(puzzle.rating);
+    const measured = classify(puzzle.rating, size);
     if (measured === level) onBand++;
     if (countSolutions(puzzle, 2) === 1) unique++;
     if (ground.solved) solvable++;

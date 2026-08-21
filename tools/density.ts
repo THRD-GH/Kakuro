@@ -9,7 +9,7 @@ for (const size of [16, 20]) {
       const c = sampleCandidate(size, block, null, rnd, 400);
       if (!c) continue;
       made++;
-      const l = classify(c.rating);
+      const l = classify(c.rating, size);
       counts.set(l, (counts.get(l) ?? 0) + 1);
     }
     console.log(`${size}x${size} b${block.toFixed(2)}: ` +

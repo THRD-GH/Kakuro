@@ -874,37 +874,115 @@ export class Solver {
 }
 
 /**
- * How hard the puzzle turned out to be.
+ * How hard the puzzle turned out to be, and how much of it was hard.
  *
- * The dearest technique it forced sets the score, six points a rung, and how
- * much work it took on top of that adds up to six more — so a rung spans one
- * gap and never quite reaches the next.
+ * The dearest technique it forced sets the score, six points a rung. What
+ * splits a rung in two is the share of the grid that genuinely needed that
+ * technique — measured by taking it away: solve again with the ladder capped
+ * one rung lower and see how much is left standing. A puzzle where that leaves
+ * three cells unsolved needed the technique once, in a corner. One where it
+ * leaves half the grid needed it throughout, and is the harder sitting.
  *
- * The effort term earns its keep. There are only five techniques in the ladder
- * that a generated grid ever really tops out on, and two of those turn up in
- * about one grid in fifty, which is no way to fill six levels. Within one
- * technique, though, the spread is real: a grid that gives up its digits in
- * thirty deductions and one that takes seventy are not the same sitting even
- * though the same reasoning cracks both. So each rung splits in two.
- *
- * Board size is deliberately *not* in here. Size is the player's own choice,
- * sitting beside the level rather than inside it, and a 20x20 is a longer
- * afternoon than a 9x9 rather than a harder one. While size did count, every
- * big board came out at the top of the ladder whatever it actually asked of
- * you — a 20x20 that fell to plain combination sums was being filed as level
- * 6. Effort is a *share* of the grid for the same reason: a bigger board takes
- * proportionally more deductions, and counting them raw would let size back in
- * through the side door.
- *
- * A puzzle the ladder cannot finish scores 100, off the top of `classify()`:
- * the generator throws those away rather than ship a grid that has to be
- * guessed at.
+ * This is a ratio of cells to cells, which matters more than it sounds. The
+ * measure it replaces counted the solver's own sweeps and divided by the cell
+ * count, and sweeps do not scale with cells: one pass resolves more of a big
+ * board than a small one, so the same puzzle scored lower the larger it got.
+ * Measured across the four boards, that share ran 0.48–0.88 at 9x9 but only
+ * 0.24–0.40 at 20x20 — so the top band sat above anything a large board could
+ * reach, and levels 2 and 6 were unreachable there for arithmetic reasons
+ * rather than for want of searching.
  */
-export function rate(result: GrindResult, whiteCells: number): number {
-  if (!result.solved) return 100;
-  const hardest = result.hardest ? TECHNIQUE_WEIGHT[result.hardest] : 1;
-  const work = (result.effort / Math.max(1, whiteCells)) * 4;
-  return hardest * 6 + Math.max(0, Math.min(5.9, work));
+/**
+ * The share a typical puzzle shows, by board and by rung, from
+ * `node tools/share.ts`.
+ *
+ * A share is a fraction of cells, and a stuck pocket is a clump rather than a
+ * single cell, so the same few awkward corners read as half a small grid and a
+ * fifteenth of a large one. Dividing by the median is what lets one set of
+ * bands mean the same thing everywhere: a level is the same *experience* on a
+ * 20 as on a 9, not the same arithmetic.
+ *
+ * Keyed on the rung as well as the board because the two that split do not
+ * behave alike — on a 9x9 a hidden-single puzzle typically leaves half the
+ * grid standing without it, where a matching puzzle leaves under a third. One
+ * scale for both put the matching split above almost anything a small board
+ * produced, and level 6 was unreachable there.
+ */
+const SHARE_SCALE: Record<number, Record<number, number>> = {
+  9: { 3: 0.52, 4: 0.26, 6: 0.29 },
+  12: { 3: 0.17, 4: 0.07, 6: 0.17 },
+  16: { 3: 0.08, 4: 0.09, 6: 0.11 },
+  20: { 3: 0.10, 4: 0.06, 6: 0.06 },
+};
+
+function shareScale(size: number, rung: number): number {
+  const sizes = Object.keys(SHARE_SCALE).map(Number);
+  const board = sizes.reduce((best, at) => (Math.abs(at - size) < Math.abs(best - size) ? at : best));
+  const rungs = SHARE_SCALE[board];
+  const nearest = Object.keys(rungs)
+    .map(Number)
+    .reduce((best, at) => (Math.abs(at - rung) < Math.abs(best - rung) ? at : best));
+  return rungs[nearest];
+}
+
+export function measure(puzzle: Puzzle): { solved: boolean; hardest: Technique | null; share: number; rating: number } {
+  const full = new Solver(puzzle).grind();
+  const white = puzzle.solution.reduce((n, digit) => n + (digit ? 1 : 0), 0);
+  if (!full.solved) return { solved: false, hardest: full.hardest, share: 0, rating: 100 };
+
+  const weight = full.hardest ? TECHNIQUE_WEIGHT[full.hardest] : 1;
+
+  /*
+   * With the top rung taken away, how much of the grid will not come out?
+   *
+   * The bottom rung is a special case and gets nothing. Take the combination
+   * union away from a puzzle that needs the combination union and nothing is
+   * left standing — the share is 1 for every such grid, which says only that
+   * it is what it is. There is no *within* to measure there, so the easiest
+   * level is the rung itself and the split starts one rung up.
+   */
+  let share = 0;
+  if (weight > 2) {
+    const solver = new Solver(puzzle);
+    solver.grind(weight - 1);
+    let stuck = 0;
+    for (const cell of solver.white) if (popcount(solver.masks[cell]) > 1) stuck++;
+    share = stuck / Math.max(1, white);
+  }
+
+  /*
+   * The bottom rung needs a discriminator of its own. Taking the combination
+   * union away from a puzzle that needs it leaves nothing standing, so every
+   * such grid shares one share and one rating — an atom in the distribution
+   * that no ranking can split. How much *work* the union took is the honest
+   * measure there: the sweeps the ladder needed, over the cells it had. That
+   * count does drift with board size, but the bands are fitted per board now,
+   * which is exactly what absorbs it.
+   */
+  if (weight <= 2) {
+    return { solved: true, hardest: full.hardest, share, rating: weight * 6 + within(full.effort / Math.max(1, white)) };
+  }
+
+  // Normalised against what that board typically shows, so the split between
+  // the two halves of a rung falls at its median wherever it is played.
+  const relative = share / shareScale(puzzle.size, weight);
+
+  return { solved: true, hardest: full.hardest, share, rating: weight * 6 + within(relative) };
+}
+
+/**
+ * Where a puzzle sits inside its rung, on a scale of nearly six — the gap to
+ * the rung above — from a measure that is 1 for a typical one.
+ *
+ * Saturating rather than clamped, and that is the point. A hard ceiling piles
+ * every puzzle past it onto one number, and an atom in the distribution cannot
+ * be split by a quantile: the level whose band landed on that value became
+ * unreachable, which is exactly what happened to level 5 on the two largest
+ * boards. This approaches the ceiling without ever reaching it, so no two
+ * puzzles that differ are scored the same.
+ */
+function within(measured: number): number {
+  return 5.9 * (1 - Math.exp(-Math.max(0, measured)));
 }
 
 /**

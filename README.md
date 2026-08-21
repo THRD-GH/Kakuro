@@ -69,43 +69,46 @@ away.
 Two separate choices. **Size** is how long you want to be here; **level** is how
 hard you want it to be.
 
-| Board | | Levels it reaches |
+| Board | | |
 | --- | --- | --- |
-| Small | 9×9 | all six |
-| Medium | 12×12 | all six |
-| Large | 16×16 | four of six |
-| Huge | 20×20 | the harder end |
+| Small | 9×9 | all six levels |
+| Medium | 12×12 | all six levels |
+| Large | 16×16 | all six levels |
+| Huge | 20×20 | all six levels |
 
 Puzzles are generated on demand rather than shipped: there is no Classic and
 New split, just a board, a level and a number. Every number is the same grid on
 every device, so a link or a saved game still names one particular puzzle.
 
-Size is deliberately not part of the difficulty rating. While it was, a 20×20
-that fell to plain combination sums was being filed as a black belt purely for
-being large. It now sits beside the level instead of inside it — but the two
-are not fully independent *facts*: a big board interlocks more, so its easy
-techniques run out sooner and its easy levels are genuinely scarce. A level
-with no puzzles on the chosen board is greyed out rather than faked.
+**The ladder is calibrated to each board.** That is not a shortcut, it is the
+only honest way to offer six levels on four boards: a 20×20 that falls to the
+combination union *everywhere* does not exist, because somewhere in two hundred
+cells something always wants more. A ladder defined by technique alone left the
+easiest levels permanently out of reach on the largest boards, and no amount of
+tuning the measure changed that — it was a fact about kakuro, not about the
+measure.
+
+So a level is a puzzle's rank against its own board. A white belt 20×20 is the
+easiest kind of 20×20 rather than a 9×9 stretched out, and every level exists
+on every board by construction. The band edges are the sextiles of what the
+generator really produces on each board; `node tools/bands.ts` refits them.
 `node tools/matrix.ts` prints which pairs are reachable.
 
 Six levels, the same white-belt-to-1st-Dan ladder as the rest of the
 collection, and they mean something specific here: **a level is a rung of the
 technique ladder.**
 
-| Level | What the puzzle forces |
-| --- | --- |
-| 1 | Clues with only one combination |
-| 2 | The same, over more of the grid before it gives |
-| 3 | A digit every combination needs, with one cell left to hold it |
-| 4 | Combinations that add up but cannot be written in |
-| 5 | Dealing combinations out across a run, cell by cell |
-| 6 | The same, on a grid that holds out most of the way |
+Difficulty is measured in two parts: the dearest technique the grid forces, and
+how much of the grid actually needed it. The second is measured by taking the
+technique away — solve again with the ladder capped a rung lower and see what
+is left standing. A puzzle where that leaves three cells needed it once, in a
+corner; one where it leaves half the grid needed it throughout.
 
-Four rungs carry six levels, because two of the seven techniques cannot carry
-one: `unique-combination` is never the hardest thing a grid asks for, and
-`sum-difference` turns up in about one grid in fifty — hunted directly, it
-appeared once in six tries at 9×9 and not at all at 14×14. So the two abundant
-rungs are split by how much of the grid put up a fight.
+That share is a fraction of cells, and a stuck pocket is a clump rather than a
+cell, so the same few awkward corners read as half a small grid and a fifteenth
+of a large one — measured, the medians run 0.52 down to 0.07 across the four
+boards. Normalising against each board's own median is what stops the ladder
+meaning different things at different sizes.
 
 Solving a puzzle names the hardest technique it actually needed, on the win
 panel and in the header (`Unique combination · 8×8`), so the level number can

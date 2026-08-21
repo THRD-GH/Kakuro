@@ -2,7 +2,7 @@ import { runsFrom } from './encode.ts';
 import { makeFiller, makeLayout } from './layout.ts';
 import type { Filler, Layout } from './layout.ts';
 import { mulberry32, seedFor, shuffle } from './rng.ts';
-import { Solver, TECHNIQUE_WEIGHT, rate } from './solver.ts';
+import { Solver, TECHNIQUE_WEIGHT, measure } from './solver.ts';
 import type { Level, Puzzle, Size } from './types.ts';
 import { popcount } from './bits.ts';
 
@@ -28,37 +28,53 @@ export const GENERATOR_VERSION = 1;
  */
 export function blockFor(size: number, level: Level): number {
   const forLevel = (6 - level) * 0.03;
-  const forSize = Math.max(0, size - 9) * 0.006;
-  return Math.max(0.2, Math.min(0.52, 0.3 + forLevel + forSize));
+  const forSize = Math.max(0, size - 9) * 0.008;
+  /*
+   * The ceiling is high enough that the hardest corner of the matrix can reach
+   * it: level 1 on a 20x20 asks for the whole of a two-hundred-cell grid to
+   * fall to the combination union, which needs runs short enough to be nearly
+   * self-evident everywhere. The layout saturates on its own well before this
+   * — it will not place a block that leaves a run of one — so a generous cap
+   * costs nothing on the boards that do not need it.
+   */
+  return Math.max(0.2, Math.min(0.6, 0.3 + forLevel + forSize));
 }
 
 /**
- * Where each level starts on the rating scale in `rate()`.
+ * Where each level starts, per board.
  *
- * The whole-number boundaries are the rungs of the technique ladder, which is
- * what difficulty in kakuro really is: 18 is where a puzzle stops giving its
- * digits up to combination sums alone, and 36 is where it stops giving them up
- * without dealing combinations out cell by cell. The fractional ones sit
- * *inside* a rung and split it by how much of the grid put up a fight.
+ * The ladder is calibrated to each board rather than to one absolute scale,
+ * and it has to be. A 20x20 that falls to the combination union *everywhere*
+ * does not exist — somewhere in two hundred cells something always wants more
+ * — so a ladder defined by technique alone left the easiest levels unreachable
+ * on the largest boards however long the search ran, and no amount of tuning
+ * the metric changed that, because it was a fact about kakuro rather than
+ * about the metric.
  *
- * Six levels out of four workable rungs needs those splits. Of the seven
- * techniques, `unique-combination` is never the hardest thing a grid asks for
- * and `sum-difference` turns up in roughly one grid in fifty — hunting it
- * directly found one in six tries at 9x9 and none at all at 14x14 — so neither
- * can carry a level of its own. The two abundant rungs are split instead, at
- * the median effort share measured by `node tools/effort.ts`.
- *
- * Every edge is inside the achievable range, because a boundary outside it is
- * a level nothing can reach. That is not hypothetical: these were briefly set
- * from a rating that counted board size, and once size moved out to its own
- * axis every one of them landed in the wrong place.
+ * Ranking a puzzle against its own board makes every level exist everywhere by
+ * construction, and says something truer besides: a white belt 20x20 is the
+ * easiest kind of 20x20, not a 9x9 stretched out. The numbers are the sextiles
+ * of what the generator actually produces on each board —
+ * `node tools/bands.ts` refits them.
  */
-export const BANDS: number[] = [0, 14.6, 18, 21, 30, 39];
+export const BANDS_BY_SIZE: Record<number, number[]> = {
+  9: [0, 14.3, 14.7, 15.1, 20.9, 22.3],
+  12: [0, 14, 20.5, 23, 38.4, 39.7],
+  16: [0, 21.2, 23.5, 27.4, 38.9, 39.8],
+  20: [0, 22.5, 39.1, 40, 40.6, 41.3],
+};
 
-export function classify(rating: number): Level {
+function bandsFor(size: number): number[] {
+  const boards = Object.keys(BANDS_BY_SIZE).map(Number);
+  const nearest = boards.reduce((best, at) => (Math.abs(at - size) < Math.abs(best - size) ? at : best));
+  return BANDS_BY_SIZE[nearest];
+}
+
+export function classify(rating: number, size: number): Level {
+  const bands = bandsFor(size);
   let level: Level = 1;
-  for (let i = BANDS.length - 1; i >= 0; i--) {
-    if (rating >= BANDS[i]) {
+  for (let i = bands.length - 1; i >= 0; i--) {
+    if (rating >= bands[i]) {
       level = (i + 1) as Level;
       break;
     }
@@ -67,13 +83,22 @@ export function classify(rating: number): Level {
 }
 
 /** The middle of a level's band — what the search steers towards. */
-function target(level: Level): number {
-  const low = BANDS[level - 1];
-  // Nothing rates far above the top band, so aiming at BANDS[5] + 6 would be
-  // aiming past the end of the scale and flattening the gradient that gets
-  // there. A shade over the edge is enough.
-  const high = level === 6 ? BANDS[5] + 1.5 : BANDS[level];
+function target(level: Level, size: number): number {
+  const bands = bandsFor(size);
+  const low = bands[level - 1];
+  const high = level === 6 ? bands[5] + 2 : bands[level];
   return (low + high) / 2;
+}
+
+/**
+ * The dearest technique a puzzle at this level may lean on: the rung the top
+ * of its band sits in. Anything above that is what makes a grid too hard for
+ * the level, and is where the search aims its next re-roll.
+ */
+function ceilingFor(level: Level, size: number): number {
+  const bands = bandsFor(size);
+  const top = level === 6 ? 54 : bands[level];
+  return Math.max(1, Math.min(9, Math.floor(top / 6)));
 }
 
 const build = (size: number, values: number[]): Puzzle => ({
@@ -115,7 +140,7 @@ function unresolved(masks: Int16Array, values: number[]): number[] {
   return out;
 }
 
-function judge(size: number, values: number[], wanted: number): Verdict {
+function judge(size: number, values: number[], wanted: number, targetLevel: Level): Verdict {
   const puzzle = build(size, values);
   const solver = new Solver(puzzle);
 
@@ -150,11 +175,43 @@ function judge(size: number, values: number[], wanted: number): Verdict {
     return { cost: 200 + stuck.length, rating: 100, level: 6, blame: stuck, shake: 0.5 };
   }
 
-  const white = values.reduce((n, digit) => n + (digit ? 1 : 0), 0);
-  const rating = rate(result, white);
+  const scored = measure(puzzle);
+  const level = classify(scored.rating, size);
+  const cost = Math.abs(scored.rating - wanted);
+
+  /*
+   * Which cells to re-roll depends on which way it is wrong, and only one of
+   * the two directions can be aimed.
+   *
+   * Too hard: the cells at fault are exactly the ones the ladder cannot reach
+   * without the technique we are trying to avoid. Solve again with the ladder
+   * capped at the level asked for, and blame whatever is left standing —
+   * everywhere else is already easy enough and re-rolling it would only
+   * disturb what works. This is what makes an easy level reachable on a large
+   * board, where the pockets needing more are a handful of cells in two
+   * hundred and shaking the grid at random never found them.
+   *
+   * Too easy: there is no such handle. Nothing is at fault, the grid is simply
+   * mild, so the whole thing is fair game and a bigger shake churns it faster.
+   */
   const blame: number[] = [];
-  for (let cell = 0; cell < values.length; cell++) if (values[cell]) blame.push(cell);
-  return { cost: Math.abs(rating - wanted), rating, level: classify(rating), blame, shake: 0.12 };
+  let shake = 0.12;
+  if (level > targetLevel) {
+    const capped = new Solver(puzzle).grind(ceilingFor(targetLevel, size));
+    for (const cell of unresolved(capped.masks, values)) blame.push(cell);
+    shake = 0.5;
+  }
+  if (blame.length === 0) {
+    for (let cell = 0; cell < values.length; cell++) if (values[cell]) blame.push(cell);
+    /*
+     * The closer the grid already is, the smaller the disturbance. On the
+     * larger boards most puzzles land in one tight cluster, so several bands
+     * are barely a point wide, and a shake sized for crossing the scale steps
+     * straight over them every time. Near the target it creeps instead.
+     */
+    shake = cost > 4 ? 0.3 : cost > 1.5 ? 0.12 : 0.05;
+  }
+  return { cost, rating: scored.rating, level, blame, shake };
 }
 
 /**
@@ -185,9 +242,10 @@ function refine(
   rnd: () => number,
   budget: number,
 ): { values: number[]; rating: number } | null {
-  const wanted = level === null ? 0 : target(level);
+  const wanted = level === null ? 0 : target(level, layout.size);
   let values = start;
-  let verdict = judge(layout.size, values, wanted);
+  const targetLevel = level ?? 6;
+  let verdict = judge(layout.size, values, wanted, targetLevel);
 
   for (let round = 0; round < budget; round++) {
     if (verdict.rating < 100 && (level === null || verdict.level === level)) {
@@ -209,7 +267,7 @@ function refine(
     const next = fill(rnd, keep);
     if (!next) continue;
 
-    const nextVerdict = judge(layout.size, next, wanted);
+    const nextVerdict = judge(layout.size, next, wanted, targetLevel);
     // Ties are taken, not just improvements: on a plateau the search has to be
     // free to wander sideways or it sits on one grid until the budget runs out.
     if (nextVerdict.cost <= verdict.cost) {
@@ -235,7 +293,7 @@ export function generatePuzzle(id: { size: Size; level: Level; number: number })
 
   let fallback: { values: number[]; rating: number } | null = null;
 
-  for (let restart = 0; restart < 12; restart++) {
+  for (let restart = 0; restart < 16; restart++) {
     const ratio = Math.max(0.18, Math.min(0.54, base + (rnd() - 0.5) * 0.06));
     const layout = makeLayout(size, ratio, rnd);
     if (!layout) continue;
@@ -244,15 +302,15 @@ export function generatePuzzle(id: { size: Size; level: Level; number: number })
     const start = fill(rnd, null);
     if (!start) continue;
 
-    const found = refine(layout, fill, start, level, rnd, 260);
+    const found = refine(layout, fill, start, level, rnd, 420);
     if (!found) continue;
 
-    if (classify(found.rating) === level) {
+    if (classify(found.rating, size) === level) {
       return { ...build(size, found.values), difficulty: level, seed: number, rating: found.rating };
     }
     // A real puzzle at the wrong level still beats no puzzle at all — but the
     // stars must match the grid, not the number that was asked for.
-    const wanted = target(level);
+    const wanted = target(level, size);
     if (!fallback || Math.abs(found.rating - wanted) < Math.abs(fallback.rating - wanted)) {
       fallback = found;
     }
@@ -261,7 +319,7 @@ export function generatePuzzle(id: { size: Size; level: Level; number: number })
   if (!fallback) throw new Error(`could not generate a level ${level} puzzle at ${size}x${size}`);
   return {
     ...build(size, fallback.values),
-    difficulty: classify(fallback.rating),
+    difficulty: classify(fallback.rating, size),
     seed: number,
     rating: fallback.rating,
   };
@@ -286,11 +344,11 @@ export function sampleCandidate(
   return {
     puzzle: {
       ...build(size, found.values),
-      difficulty: level ?? classify(found.rating),
+      difficulty: level ?? classify(found.rating, size),
       seed: 0,
       rating: found.rating,
     },
     rating: found.rating,
-    level: classify(found.rating),
+    level: classify(found.rating, size),
   };
 }

@@ -15,7 +15,7 @@ for (const size of [9, 12, 16, 20]) {
     for (let attempt = 0; attempt < 60 && hits < want && Date.now() - t0 < capMs; attempt++) {
       const block = blockFor(size, level) + (attempt % 5 - 2) * 0.02;
       const c = sampleCandidate(size, block, level, rnd, 400);
-      if (c && classify(c.rating) === level) hits++;
+      if (c && classify(c.rating, size) === level) hits++;
     }
     const each = hits > 0 ? Math.round((Date.now() - t0) / hits) : 0;
     row.push(hits >= want ? `L${level} ${String(each).padStart(4)}ms` : `L${level}  MISS  `);

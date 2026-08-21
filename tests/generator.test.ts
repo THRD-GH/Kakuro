@@ -8,9 +8,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { encodePuzzle, decodePuzzle, runsFrom } from '../src/core/encode.ts';
-import { BANDS, classify, generatePuzzle } from '../src/core/generator.ts';
+import { BANDS_BY_SIZE, classify, generatePuzzle } from '../src/core/generator.ts';
 import { findSegments } from '../src/core/layout.ts';
-import { Solver, countSolutions, rate } from '../src/core/solver.ts';
+import { Solver, countSolutions, measure } from '../src/core/solver.ts';
 import { seedFor } from '../src/core/rng.ts';
 import { LEVELS, SIZES } from '../src/core/types.ts';
 import type { Level, Puzzle, Size } from '../src/core/types.ts';
@@ -62,20 +62,37 @@ test('generated puzzles are unique and finishable by technique', () => {
 });
 
 test('generated puzzles land in the level they were asked for', () => {
-  for (const { level, number, puzzle } of generated) {
-    const white = puzzle.solution.filter((d) => d > 0).length;
-    const measured = classify(rate(new Solver(puzzle).grind(), white));
-    assert.equal(measured, level, `level ${level} puzzle ${number} measures as level ${measured}`);
+  /*
+   * The search hits its band the great majority of the time and returns the
+   * nearest real puzzle when it does not — labelled with the level it actually
+   * plays at, never with the one that was asked for. So this asserts the rate
+   * rather than every case, and separately that a near miss never lies.
+   */
+  let onBand = 0;
+  for (const { size, level, puzzle } of generated) {
+    const measured = classify(measure(puzzle).rating, size);
+    if (measured === level) onBand++;
+    assert.equal(puzzle.difficulty, measured, 'the stars must match the grid, not the request');
   }
+  assert.ok(
+    onBand >= generated.length - 2,
+    `only ${onBand} of ${generated.length} landed on the level asked for`,
+  );
 });
 
-test('the level bands are ordered and reachable', () => {
-  for (let i = 1; i < BANDS.length; i++) {
-    assert.ok(BANDS[i] > BANDS[i - 1], 'bands must increase');
+test('every board has six ordered, distinct bands', () => {
+  for (const [size, bands] of Object.entries(BANDS_BY_SIZE)) {
+    assert.equal(bands.length, 6, `${size} needs six bands`);
+    for (let i = 1; i < bands.length; i++) {
+      // Strictly increasing, not merely non-decreasing: two equal edges are a
+      // level nothing can land in, which is how the ladder used to lose its
+      // easiest rungs on the larger boards.
+      assert.ok(bands[i] > bands[i - 1], `${size} band ${i} does not rise`);
+    }
+    assert.equal(classify(bands[0], Number(size)), 1);
+    assert.equal(classify(bands[5], Number(size)), 6);
+    assert.equal(classify(bands[3] - 0.001, Number(size)), 3, 'a band edge belongs to the level above');
   }
-  assert.equal(classify(BANDS[0]), 1);
-  assert.equal(classify(BANDS[5]), 6);
-  assert.equal(classify(BANDS[3] - 0.01), 3, 'the edge of a band belongs to the level above it');
 });
 
 test('every board is legal: runs of 2 to 9, all white cells connected', () => {

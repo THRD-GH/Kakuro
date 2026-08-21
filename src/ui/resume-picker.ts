@@ -16,11 +16,30 @@ export function openResumePicker(app: AppContext, onChanged: () => void): void {
   const summary = el('p', { class: 'picker-summary' });
   const rows = el('div', { class: 'picker-rows' });
 
+  /*
+   * The menu behind is refreshed when the panel closes, not on every change.
+   *
+   * It used to be told after each deletion — and the telling is `goMenu()`,
+   * which begins by closing every overlay. So throwing one game away tore
+   * down the panel the player was working in and dropped them back on the
+   * menu. With a single parked game that looks like it worked; with several
+   * it means reopening the picker for every one you want rid of.
+   *
+   * Nobody is looking at the menu while a modal covers it, so it can wait.
+   */
+  let changed = false;
+  let leaving = false;
+  const finish = (): void => {
+    if (changed && !leaving) onChanged();
+  };
+
   const draw = (): void => {
     const saves = unfinishedSaves();
     summary.textContent =
-      `${saves.length} unfinished ${saves.length === 1 ? 'game' : 'games'}. ` +
-      'Tap one to pick it up, or the bin to throw it away.';
+      saves.length === 0
+        ? 'Nothing parked any more.'
+        : `${saves.length} unfinished ${saves.length === 1 ? 'game' : 'games'}. ` +
+          'Tap one to pick it up, or the bin to throw it away.';
     clear(rows);
 
     for (const saved of saves) {
@@ -49,6 +68,9 @@ export function openResumePicker(app: AppContext, onChanged: () => void): void {
         }),
       );
       resume.addEventListener('click', () => {
+        // Off to the board, so the menu underneath is about to be replaced
+        // wholesale and does not want rebuilding first.
+        leaving = true;
         closeTopOverlay();
         app.playPuzzle(id);
       });
@@ -72,10 +94,9 @@ export function openResumePicker(app: AppContext, onChanged: () => void): void {
             dropSave(id);
             app.history = forgetPuzzle(app.history, id);
             saveHistory(app.history);
-            onChanged();
+            changed = true;
             draw();
             toast(`${displayPuzzleId(id)} thrown away`);
-            if (unfinishedSaves().length === 0) closeTopOverlay();
           },
         );
       });
@@ -87,7 +108,10 @@ export function openResumePicker(app: AppContext, onChanged: () => void): void {
   draw();
   openOverlay(el('div', { class: 'picker' }, summary, rows), {
     title: 'Unfinished games',
-    actions: [{ label: 'Close', primary: true }],
+    // Both ways out, because the button closes with `action` and tapping the
+    // shade or pressing Escape closes with `dismiss`.
+    actions: [{ label: 'Close', primary: true, onClick: finish }],
+    onDismiss: finish,
   });
 }
 

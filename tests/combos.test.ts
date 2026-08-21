@@ -7,6 +7,7 @@ import { bit, digitsOf, popcount } from '../src/core/bits.ts';
 import { dealableCombos } from '../src/core/combos.ts';
 import { generatePuzzle } from '../src/core/generator.ts';
 import { Game } from '../src/game/state.ts';
+import { combosFor } from '../src/core/combos.ts';
 import { fillCandidates, runState } from '../src/ui/combos.ts';
 
 const id = { size: 9, level: 1, number: 1 } as const;
@@ -132,4 +133,54 @@ test('marks already on the board never narrow the fill', () => {
   const cell = grid.solution.findIndex((d) => d > 0);
   game.pencilInto([cell], bit(grid.solution[cell] === 9 ? 8 : 9));
   assert.deepEqual(fillCandidates(game), before);
+});
+
+test('Marks offers what the rules allow and stops there', () => {
+  const id = { size: 12, level: 3, number: 6 } as const;
+  const grid = generatePuzzle(id);
+  const game = new Game(id, grid);
+
+  // Part-solved, which is when the cheap definition and a clever one diverge:
+  // on an untouched grid every cell takes every digit, so any set that adds up
+  // can also be dealt out and the two agree.
+  const white = grid.solution.map((d, i) => (d > 0 ? i : -1)).filter((i) => i >= 0);
+  for (let i = 0; i < white.length; i += 3) game.write(white[i], grid.solution[white[i]], false);
+
+  /*
+   * The definition, worked out again from the rules rather than from the
+   * implementation: a digit is possible in a cell when it is not already in
+   * either run through it and it appears in some set of the right size that
+   * makes what that run has left.
+   */
+  const expected = new Array<number>(grid.solution.length).fill(0);
+  const touched = new Set<number>();
+  for (const run of grid.runs) {
+    let left = run.sum;
+    let used = 0;
+    const open: number[] = [];
+    for (const cell of run.cells) {
+      const digit = game.values[cell];
+      if (digit) {
+        left -= digit;
+        used |= bit(digit);
+      } else open.push(cell);
+    }
+    let union = 0;
+    for (const combo of combosFor(open.length, left)) union |= combo;
+    for (const cell of open) {
+      const allowed = union & ~used;
+      expected[cell] = touched.has(cell) ? expected[cell] & allowed : allowed;
+      touched.add(cell);
+    }
+  }
+
+  const actual = fillCandidates(game);
+  for (const cell of white) {
+    if (game.values[cell]) continue;
+    assert.equal(
+      actual[cell],
+      expected[cell],
+      `cell ${cell}: offered ${digitsOf(actual[cell]).join('')}, rules allow ${digitsOf(expected[cell]).join('')}`,
+    );
+  }
 });

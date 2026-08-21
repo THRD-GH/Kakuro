@@ -37,7 +37,7 @@ why there is no Notes mode.
 | Tap a keypad digit | Toggle that digit in the cell |
 | Long-click / double-click a digit | Force it in as the answer, tidying the marks in both its runs |
 | Long-click Clear | Empty the cell |
-| Marks | Pencil in every candidate the clues still allow |
+| Marks | Pencil in what is possible in every cell — no further |
 
 Keyboard: arrows move, `1`–`9` toggle, `Shift`+digit forces, `Backspace`
 clears, `M` fills the marks, `Z` undoes, `Y` redoes. When Check, Hint or Clear
@@ -132,19 +132,29 @@ moment it was saying most. It cuts the other way as well, and that is the point:
 marks that cannot be right leave the run with *nothing that fits*, which is
 worth being told before the rest of the grid is built on them.
 
-**Marks** pencils that same reading into every cell at once — and the rule it
-keeps to is that it may not tell you anything the table would not have told
-you cell by cell. It runs the bookkeeping once and never writes a digit: for
-each run, the combinations that can still be dealt out, unioned, and each cell
-given what both of its runs allow. A cell left with one candidate is a naked
-single you can see for yourself, which is what pencil marks are for.
+**Marks** pencils in what is *possible* in every cell at once — and possible
+is where it stops. A digit is offered when nothing in the rules has ruled it
+out: it is not already written in either run through the cell, and it appears
+in at least one set that adds up to what that run has left. Working out which
+of those survive is the puzzle. Doing that for the player is not saving them
+the writing, it is playing for them.
 
-It was a back door before that. Filling from the technique solver run to a
-standstill *places* digits, and placed digits feed the next sweep, so on an
-easy grid one tap wrote the entire answer in pencil — measured across the
-board sizes, 100% of empty cells came back with a single correct candidate at
-white belt, and 70–93% at black. One pass leaves 3–15%. `node tools/marks.ts`
-prints that table.
+So Marks deliberately does *less* than the table beside the board. The table
+lists only combinations that can actually be dealt out across a run's cells —
+a real deduction, run through a matching — for the one run you asked about.
+Marks writes into two hundred cells at once and nobody asked, so it stops at
+the arithmetic. On an untouched grid the two agree, because a cell that can
+take any digit can always be dealt one; part-solved is where they part, and
+there the matching was cutting 2.58 candidates a cell down to 2.25.
+
+It has been too clever twice. First it filled from the technique solver run to
+a standstill — and those rules *place* digits, and a placed digit feeds the
+next sweep, so on an easy grid one tap returned a single correct candidate for
+every empty cell: the whole answer, in pencil. Measured across the four
+boards, 100% of cells came back decided at white belt and 70–93% at black.
+Cutting that back to one pass of dealable combinations fixed the back door but
+still did the player's narrowing for them. Sums and repeats are where the line
+goes. `node tools/marks.ts` prints the comparison.
 
 **Hint** names the technique that cracks the position, explains why it works
 and tints the cells it is talking about; it only writes the digit in if asked.

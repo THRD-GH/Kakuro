@@ -28,7 +28,7 @@ export function openHelp(): void {
     section('Playing', [
       'A cell holds a set of digits: one shows as an answer, two or more show as pencil marks. Tap a cell to select it, then tap digits to put them in and out of that set — so tapping a second digit turns an answer into two marks, and crossing marks off until one is left answers the cell.',
       'Hold a digit, or double-tap it, to say straight out that it is the answer. Only that strikes the digit off the marks in the rest of both runs; a plain tap never changes anything outside its own cell.',
-      'Marks pencils in every candidate the clues still allow. Long-click Clear empties the cell.',
+      'Marks pencils in what is possible in every cell at once — the digits not already in one of its runs that could still make that run add up. Narrowing them down from there is the puzzle, so it stops at what the rules allow. Long-click Clear empties the cell.',
       'Keyboard: arrows move, 1–9 toggle, Shift and a digit forces, Backspace clears, M fills the marks, Z undoes, Y redoes. When Check, Hint or Clear is set to need a hold, the keyboard uses Shift with C, H or Backspace.',
     ]),
     section('The table', [

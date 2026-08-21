@@ -1,5 +1,5 @@
 import { ALL, bit, digitsOf } from '../core/bits.ts';
-import { dealableCombos } from '../core/combos.ts';
+import { combosFor, dealableCombos } from '../core/combos.ts';
 import type { Run } from '../core/types.ts';
 import type { Game } from '../game/state.ts';
 import { clear, el } from './dom.ts';
@@ -262,25 +262,26 @@ export function runState(game: Game, run: Run, respectMarks = true): RunState {
 }
 
 /**
- * What the table would say about every cell at once — which is what Marks
- * pencils in.
+ * What is possible in each cell — which is what Marks pencils in.
  *
- * The point is the ceiling. This runs the bookkeeping *once* and never writes
- * a digit: for each run, the combinations that can still be dealt out across
- * its empty cells, unioned, and each cell given what both of its runs allow.
- * A cell left with one candidate is a naked single the player can see, which
- * is what pencil marks are for.
+ * Possible, and no more than that. A digit is offered in a cell when nothing
+ * in the rules has ruled it out: it is not already written in either run
+ * through the cell, and it appears in at least one set that adds up to what
+ * that run has left. Working out which of those survive is the puzzle, and
+ * doing it for the player is not saving them writing, it is playing for them.
  *
- * What it must not do is think. Marks used to hand the grid to the technique
- * solver and run the cheap rules to a standstill — which places digits, and
- * placing digits feeds the next sweep. On an easy puzzle that is the whole
- * solve: every cell came back with exactly one candidate, so one tap wrote
- * the answer into all of them in pencil. A back door, and a well-signposted
- * one.
+ * So this deliberately does *less* than the table beside the board. The table
+ * lists only combinations that can actually be dealt out across a run's cells
+ * — a real deduction, run through a matching — and it does that for one run
+ * you asked about. Marks writes into two hundred cells at once and is not
+ * asked for, so it stops at the arithmetic.
  *
- * The rule it keeps to now is that Marks may not tell you anything the table
- * would not have told you cell by cell. It saves the writing, not the
- * reasoning.
+ * It has been too clever twice. First it filled from the technique solver run
+ * to a standstill, which places digits, and placed digits feed the next
+ * sweep: on an easy grid one tap returned a single correct candidate for
+ * every empty cell — the whole answer, in pencil. Cutting it back to one pass
+ * of dealable combinations still left it doing the player's narrowing for
+ * them. Sums and repeats are where the line goes.
  */
 export function fillCandidates(game: Game): number[] {
   const out = new Array<number>(game.values.length).fill(0);
@@ -288,15 +289,19 @@ export function fillCandidates(game: Game): number[] {
 
   for (const run of game.puzzle.runs) {
     // Not `respectMarks`: this is what replaces the marks, so reading them
-    // first would only ever let it narrow what is already written down.
+    // first would only ever let a stale one preserve itself.
     const { left, open, masks } = runState(game, run, false);
+
+    // Every digit that appears in any set of the right size and total. No
+    // matching, so nothing here depends on which cell could take which digit.
     let union = 0;
-    for (const combo of dealableCombos(left, masks, 0)) union |= combo;
+    for (const combo of combosFor(open.length, left)) union |= combo;
 
     for (let i = 0; i < open.length; i++) {
       const cell = open[i];
-      // A cell is in two runs and has to satisfy both, so the second one it
-      // is reached from narrows what the first allowed.
+      // A cell is in two runs and has to satisfy both, so the second run it
+      // is reached from narrows what the first allowed. That is the rule of
+      // the game, not a deduction on top of it.
       const allowed = masks[i] & union;
       out[cell] = seen[cell] ? out[cell] & allowed : allowed;
       seen[cell] = true;

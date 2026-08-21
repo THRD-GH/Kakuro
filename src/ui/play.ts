@@ -5,10 +5,10 @@ import { displayPuzzleId } from '../core/types.ts';
 import type { Puzzle, PuzzleId } from '../core/types.ts';
 import { Game } from '../game/state.ts';
 import type { SavedGame } from '../game/storage.ts';
-import { dropSave, puzzleLink, putSave, recordFinish, recordStart } from '../game/storage.ts';
+import { dropSave, puzzleLink, putSave, recordFinish, recordStart, saveSettings } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
 import { Board } from './board.ts';
-import { openCombinations } from './combos.ts';
+import { CombosBar } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
 import { bindTap } from './pointer.ts';
 import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
@@ -19,6 +19,7 @@ export class PlayScreen {
   private app: AppContext;
   private game: Game;
   private board: Board;
+  private combos: CombosBar;
 
   private clock: HTMLElement;
   private claim!: HTMLElement;
@@ -31,6 +32,7 @@ export class PlayScreen {
   private zoomed = false;
   private zoomButton!: HTMLButtonElement;
   private pauseButton!: HTMLButtonElement;
+  private tableButton!: HTMLButtonElement;
   private paused = false;
   /** How far down the current line of reasoning Hint has walked. */
   private hintDepth = 0;
@@ -44,6 +46,10 @@ export class PlayScreen {
     app.history = recordStart(app.history, id);
 
     this.board = new Board(this.game, app.settings, (cell) => this.select(cell));
+    this.combos = new CombosBar(this.game, (run, mask) => {
+      this.game.pencilInto(run.cells, mask);
+      this.afterEdit();
+    });
 
     this.clock = el('button', { class: 'clock', type: 'button', 'aria-label': 'Time' });
     this.clock.addEventListener('click', () => {
@@ -92,7 +98,12 @@ export class PlayScreen {
         'div',
         { class: 'board-area' },
         el('div', { class: 'board-wrap' }, this.board.node),
-        el('div', { class: 'board-overlays' }, this.hintNote),
+        el(
+          'div',
+          { class: 'board-overlays' },
+          this.hintNote,
+          el('div', { class: 'combos-wrap folded' }, this.combos.node),
+        ),
       ),
       this.controls(),
     );
@@ -103,6 +114,7 @@ export class PlayScreen {
      * a two-figure clue in half of that is not, and it is below the size a
      * thumb can hit. On anything wider there is room to show the whole board.
      */
+    this.applyCombosSetting();
     this.setZoom(puzzle.size >= 16 && window.innerWidth < 520);
     this.tick();
     this.ticker = window.setInterval(() => this.tick(), 500);
@@ -180,8 +192,18 @@ export class PlayScreen {
     if (this.app.settings.hintNeedsHold) bindTap(hint, { onHold: () => this.hint() });
     else bindTap(hint, { onTap: () => this.hint() });
 
-    const table = el('button', { class: 'key act', type: 'button', text: 'Table' });
-    table.addEventListener('click', () => this.openTable());
+    this.tableButton = el('button', {
+      class: 'key act',
+      type: 'button',
+      'aria-pressed': 'false',
+      text: 'Table',
+    });
+    this.tableButton.addEventListener('click', () => {
+      this.app.settings.showCombos = !this.app.settings.showCombos;
+      saveSettings(this.app.settings);
+      this.applyCombosSetting();
+    });
+    const table = this.tableButton;
 
     this.zoomButton = el('button', {
       class: 'key act glyph',
@@ -227,19 +249,11 @@ export class PlayScreen {
     );
   }
 
-  /** The combination finder, on the run through the cell in hand. */
-  private openTable(): void {
-    const cell = this.board.selection;
-    if (cell < 0 || this.game.isClue(cell)) {
-      toast('Pick a cell first — the table works on the runs through it.');
-      return;
-    }
-    openCombinations(this.game, cell, (run, mask) => {
-      const empty = run.cells.filter((at) => !this.game.values[at]);
-      this.game.pencilInto(empty, mask);
-      this.afterEdit();
-      toast('Pencilled in.');
-    });
+  private applyCombosSetting(): void {
+    const open = this.app.settings.showCombos;
+    this.node.querySelector('.combos-wrap')?.classList.toggle('folded', !open);
+    this.tableButton?.setAttribute('aria-pressed', String(open));
+    this.tableButton?.classList.toggle('on', open);
   }
 
   /**
@@ -279,6 +293,7 @@ export class PlayScreen {
   private select(cell: number): void {
     if (cell < 0) return;
     this.board.select(cell);
+    this.combos.show(cell);
   }
 
   private setNotes(on: boolean): void {
@@ -324,6 +339,7 @@ export class PlayScreen {
   private afterEdit(): void {
     this.hintDepth = 0;
     this.board.paint();
+    this.combos.refresh();
     this.undoButton.disabled = !this.game.canUndo;
     this.redoButton.disabled = !this.game.canRedo;
     this.queueSave();

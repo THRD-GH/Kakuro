@@ -685,160 +685,131 @@ p {
   --step: 0.16rem;
 }
 
-/* -------------------------------------------------- the combination finder */
+/* ---------------------------------------------------- the combination bar */
 
 /*
- * Built like the sum calculator in Killer Sudoku, because it answers the same
- * question: the clue is prefilled, digits cycle through required and ruled
- * out, the list narrows as you go, and a single surviving combination can be
- * pencilled straight in. Kakuro has two clues through every cell rather than
- * one cage, so the run is a tab rather than a given.
+ * A strip over the foot of the board, not a panel over the whole screen. It is
+ * read against the grid and it follows the cursor, so it has to leave the grid
+ * visible: the panel it replaced took 59% of a phone and hid the board behind
+ * it, which is no use for a table about the cell you are looking at.
  */
-.calc-body {
-  display: grid;
-  gap: 0.5rem;
+.combos-wrap {
+  padding: 0.4rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  box-shadow: 0 -8px 28px var(--shadow);
+  backdrop-filter: blur(3px);
 }
 
-.calc-tabs {
-  display: flex;
+.combos-wrap.folded {
+  display: none;
+}
+
+.combos {
+  display: grid;
   gap: 0.3rem;
 }
 
-.calc-tab {
-  flex: 1;
-  padding: 0.4rem 0.5rem;
+.combos-idle {
+  color: var(--dim);
+  font-size: 0.78rem;
+}
+
+.combos-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+/* The clue, as it is written on the board: total above, direction below. */
+.combos-clue {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.35rem;
+  background: var(--block);
+  color: var(--block-ink);
+}
+
+.combos-sum {
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
-  color: var(--dim);
 }
 
-.calc-tab.on {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--text);
-  font-weight: 600;
+.combos-dir {
+  font-size: 0.5rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
 }
 
-.calc-lede {
-  color: var(--dim);
-  font-size: 0.82rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.calc-controls {
-  display: flex;
-  gap: 0.5rem;
-  align-items: flex-start;
-}
-
-.calc-keys {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.25rem;
-}
-
-.calc-key {
-  min-height: 2.2rem;
-  font-size: 1rem;
-  font-variant-numeric: tabular-nums;
-  background: var(--k-face);
-}
-
-/* Green for required, red for ruled out — the two states the list filters on. */
-.calc-key.inc {
-  background: color-mix(in srgb, var(--met) 26%, var(--panel));
-  border-color: var(--met);
-  font-weight: 650;
-}
-
-.calc-key.exc {
-  background: color-mix(in srgb, var(--error) 22%, var(--panel));
-  border-color: var(--error);
-  text-decoration: line-through;
-}
-
-/* Facts about the board rather than filters: already in, or with nowhere to go. */
-.calc-key.placed {
-  box-shadow: inset 0 -3px 0 var(--met);
-}
-
-.calc-key.blocked {
-  opacity: 0.55;
-}
-
-.calc-fields {
-  display: grid;
-  gap: 0.3rem;
-  width: 6.5rem;
-}
-
-.calc-fields label {
-  display: grid;
-  gap: 0.1rem;
+.combos-left {
+  flex: 0 0 auto;
   font-size: 0.7rem;
   color: var(--dim);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.calc-fields input {
-  width: 100%;
-  padding: 0.3rem 0.4rem;
-  font: inherit;
   font-variant-numeric: tabular-nums;
-  color: var(--text);
-  background: var(--cell);
-  border: 1px solid var(--line);
-  border-radius: 0.4rem;
 }
 
-.calc-results {
+.combos-note {
+  font-size: 0.75rem;
+  color: var(--dim);
+}
+
+.combos-note.done {
+  color: var(--met);
+}
+
+.combos-note.wrong {
+  color: var(--error);
+}
+
+/* One row per run, scrolling sideways rather than wrapping into a block. */
+.combos-options {
+  flex: 1 1 auto;
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 0.3rem;
-  max-height: 40vh;
-  overflow-y: auto;
+  gap: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 1px;
 }
 
-.calc-combo {
+.combos-options::-webkit-scrollbar {
+  display: none;
+}
+
+.combo {
+  flex: 0 0 auto;
   display: inline-flex;
-  gap: 0.15rem;
-  padding: 0.25rem 0.45rem;
-  font-size: 0.85rem;
+  gap: 0.1rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.35rem;
+  background: var(--k-face);
+  border-color: var(--k-face-line);
+  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
-  background: var(--panel-2);
 }
 
-.calc-combo.struck {
+.combo em {
+  font-style: normal;
+}
+
+/* A digit with nowhere to go in this run: the combination is still listed,
+   because the block may lift, but it is not the one to reach for. */
+.combo em.blocked {
+  opacity: 0.35;
+}
+
+.combo.unlikely {
+  border-style: dashed;
+}
+
+.combo.struck {
   opacity: 0.4;
   text-decoration: line-through;
-}
-
-.calc-combo .placed {
-  color: var(--met);
-  font-weight: 800;
-}
-
-.calc-combo .blocked {
-  opacity: 0.5;
-}
-
-.calc-none {
-  color: var(--dim);
-  font-size: 0.82rem;
-}
-
-.calc-foot {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.calc-btn {
-  flex: 1;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.85rem;
 }
 
 /* ------------------------------------------------------------- the controls */

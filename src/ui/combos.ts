@@ -1,269 +1,160 @@
 import { bit, digitsOf } from '../core/bits.ts';
-import { findCombos, maxSum, minSum } from '../core/combos.ts';
+import { findCombos } from '../core/combos.ts';
 import type { Run } from '../core/types.ts';
 import type { Game } from '../game/state.ts';
-import { el } from './dom.ts';
-import { openOverlay } from './overlay.ts';
-
-type DigitState = 'neutral' | 'include' | 'exclude';
+import { clear, el } from './dom.ts';
 
 /**
- * The combination finder, built on the same idea as the sum calculator in
- * Killer Sudoku: the clue is prefilled, digits cycle through required and
- * ruled-out, the list narrows as you go, and when one combination is left it
- * can be pencilled straight into the run.
+ * The combination bar: what can still go in the cell you are on.
  *
- * Kakuro has two clues through every cell rather than one cage, so the panel
- * opens on whichever run has more left to give and the other is a tap away.
- * The sum and cell count are the *remaining* ones — digits already written in
- * come out of both, because the question being asked is always "what can still
- * go in the cells that are still empty".
+ * This is a reference you read *against* the grid, dozens of times a puzzle,
+ * so it lives over the foot of the board and follows the cursor. It replaced a
+ * panel that opened over the whole screen — 59% of a phone, with the board
+ * entirely hidden behind it — which got the relationship backwards: you cannot
+ * consult a table about a cell you can no longer see, and you had to close it
+ * again before you could even move.
+ *
+ * Both runs at once, because a kakuro cell is the crossing of two clues and
+ * the interesting combinations are the ones that satisfy both. No fields to
+ * fill in: the total and the cell count come from the board, and are always
+ * the *remaining* ones — digits already written are taken out of the total and
+ * out of the alphabet, so what is listed is what could still be written.
  */
-export function openCombinations(
-  game: Game,
-  cell: number,
-  onPencil: (run: Run, mask: number) => void,
-): void {
-  const runs = [game.acrossRun(cell), game.downRun(cell)].filter((run): run is Run => run !== null);
-  if (runs.length === 0) return;
+export class CombosBar {
+  readonly node: HTMLElement;
 
-  const openCount = (run: Run): number => run.cells.filter((at) => !game.values[at]).length;
-  let current = runs.length > 1 && openCount(runs[1]) > openCount(runs[0]) ? runs[1] : runs[0];
+  private game: Game;
+  private onPencil: (run: Run, mask: number) => void;
+  private cell = -1;
+  /** Combinations ruled out by hand, per run, by digit mask. */
+  private struck = new Map<number, Set<number>>();
 
-  openOverlay(build(), {
-    title: 'Combinations',
-    panelClass: 'calc',
-    actions: [{ label: 'Done', primary: true }],
-  });
-
-  function build(): HTMLElement {
-    const body = el('div', { class: 'calc-body' });
-    render(body);
-    return body;
+  constructor(game: Game, onPencil: (run: Run, mask: number) => void) {
+    this.game = game;
+    this.onPencil = onPencil;
+    this.node = el('div', { class: 'combos', 'aria-live': 'polite', 'aria-label': 'Combinations' });
   }
 
-  function render(body: HTMLElement): void {
-    const run = current;
-    const written = run.cells.filter((at) => game.values[at]);
-    const open = run.cells.filter((at) => !game.values[at]);
-    const placed = written.reduce((mask, at) => mask | bit(game.values[at]), 0);
-    const left = run.sum - written.reduce((total, at) => total + game.values[at], 0);
+  show(cell: number): void {
+    this.cell = cell;
+    this.paint();
+  }
+
+  refresh(): void {
+    this.paint();
+  }
+
+  private paint(): void {
+    clear(this.node);
+    const cell = this.cell;
+    if (cell < 0 || this.game.isClue(cell)) {
+      this.node.append(el('p', { class: 'combos-idle', text: 'Pick a cell.' }));
+      return;
+    }
+
+    for (const run of [this.game.acrossRun(cell), this.game.downRun(cell)]) {
+      if (run) this.node.append(this.rowFor(run));
+    }
+  }
+
+  private rowFor(run: Run): HTMLElement {
+    const game = this.game;
+    let used = 0;
+    let left = run.sum;
+    const open: number[] = [];
+    for (const at of run.cells) {
+      const digit = game.values[at];
+      if (digit) {
+        used |= bit(digit);
+        left -= digit;
+      } else open.push(at);
+    }
+
+    const head = el(
+      'b',
+      { class: 'combos-clue' },
+      el('span', { class: 'combos-sum', text: String(run.sum) }),
+      el('span', { class: 'combos-dir', text: run.dir }),
+    );
+
+    const row = el('div', { class: `combos-row ${run.dir}` }, head);
+
+    if (open.length === 0) {
+      row.append(
+        el('span', {
+          class: left === 0 ? 'combos-note done' : 'combos-note wrong',
+          text: left === 0 ? 'complete' : `over by ${Math.abs(left)}`,
+        }),
+      );
+      return row;
+    }
 
     /*
-     * Digits no empty cell of this run could take, because each is already
-     * written into the run crossing that cell. Judged across the whole run: a
-     * digit merely blocked at one cell is not blocked for the run.
+     * A digit no empty cell of this run could take, because the run crossing
+     * each of them already has it. Judged across the whole run: blocked at one
+     * cell is not blocked for the run.
      */
     let blocked = 0;
     for (let digit = 1; digit <= 9; digit++) {
-      const anywhere = open.some((at) => {
+      const fits = open.some((at) => {
         const crossing = run.dir === 'across' ? game.downRun(at) : game.acrossRun(at);
         if (!crossing) return true;
         return !crossing.cells.some((other) => game.values[other] === digit);
       });
-      if (!anywhere) blocked |= bit(digit);
+      if (!fits) blocked |= bit(digit);
     }
-    blocked &= ~placed;
 
-    const state: DigitState[] = Array.from({ length: 10 }, () => 'neutral');
-    const struck = new Set<number>();
-    let remaining: number[] = [];
+    const options = findCombos(open.length, left, 0, used);
+    if (options.length === 0) {
+      row.append(el('span', { class: 'combos-note wrong', text: 'nothing fits' }));
+      return row;
+    }
 
-    const results = el('div', { class: 'calc-results' });
-    const pencil = el('button', { class: 'calc-btn', type: 'button', text: 'Pencil in' });
-    pencil.disabled = true;
-
-    const sumField = el('input', {
-      type: 'number',
-      min: '1',
-      max: '45',
-      value: String(left),
-      inputmode: 'numeric',
-      enterkeyhint: 'done',
-      'aria-label': 'Total',
-    });
-    const sizeField = el('input', {
-      type: 'number',
-      min: '1',
-      max: '9',
-      value: String(open.length),
-      inputmode: 'numeric',
-      enterkeyhint: 'done',
-      'aria-label': 'Cells',
-    });
-
-    /*
-     * Wrapped in a form that does nothing but dismiss the keyboard: a phone
-     * only offers to close its keypad when the field has somewhere to submit
-     * to, and loose in a div the Done key does nothing at all.
-     */
-    const fields = el(
-      'form',
-      { class: 'calc-fields' },
-      el('label', {}, 'Total', sumField),
-      el('label', {}, 'Cells', sizeField),
-    );
-    fields.addEventListener('submit', (e) => {
-      e.preventDefault();
-      sumField.blur();
-      sizeField.blur();
-    });
-
-    const keyFor = (digit: number): string => {
-      const marks = [
-        state[digit] === 'include' ? 'inc' : state[digit] === 'exclude' ? 'exc' : '',
-        placed & bit(digit) ? 'placed' : '',
-        blocked & bit(digit) ? 'blocked' : '',
-      ].filter(Boolean);
-      return `calc-key ${marks.join(' ')}`.trim();
-    };
-
-    const keys = el('div', { class: 'calc-keys' });
-    const keyNodes: HTMLElement[] = [];
-    for (let digit = 1; digit <= 9; digit++) {
-      const key = el('button', {
-        class: keyFor(digit),
+    const struck = this.struck.get(run.clue * 4 + (run.dir === 'across' ? 0 : 1)) ?? new Set<number>();
+    const list = el('div', { class: 'combos-options' });
+    for (const mask of options) {
+      const chip = el('button', {
+        class: `combo${struck.has(mask) ? ' struck' : ''}${mask & blocked ? ' unlikely' : ''}`,
         type: 'button',
-        text: String(digit),
-        title:
-          placed & bit(digit)
-            ? 'already written into this run'
-            : blocked & bit(digit)
-              ? 'cannot go in any empty cell of this run'
-              : undefined,
+        title: 'Tap to pencil in · hold to rule out',
       });
-      key.addEventListener('click', () => {
-        // Ruling a digit out is the commoner move, so it comes first.
-        state[digit] =
-          state[digit] === 'neutral' ? 'exclude' : state[digit] === 'exclude' ? 'include' : 'neutral';
-        key.className = keyFor(digit);
-        run2();
-      });
-      keyNodes.push(key);
-      keys.append(key);
-    }
-
-    function run2(): void {
-      const size = Math.max(1, Math.min(9, Number(sizeField.value) || 0));
-      const sum = Math.max(1, Math.min(45, Number(sumField.value) || 0));
-      let include = 0;
-      let exclude = 0;
-      for (let digit = 1; digit <= 9; digit++) {
-        if (state[digit] === 'include') include |= bit(digit);
-        if (state[digit] === 'exclude') exclude |= bit(digit);
-      }
-
-      results.replaceChildren();
-      let matches: number[] = [];
-      if (sum < minSum(size) || sum > maxSum(size)) {
-        results.append(
-          el('p', {
-            class: 'calc-none',
-            text:
-              `${size} cell${size === 1 ? '' : 's'} cannot total ${sum} ` +
-              `— the range is ${minSum(size)} to ${maxSum(size)}.`,
+      for (const digit of digitsOf(mask)) {
+        chip.append(
+          el('em', {
+            class: blocked & bit(digit) ? 'blocked' : '',
+            text: String(digit),
           }),
         );
-      } else {
-        matches = findCombos(size, sum, include, exclude);
-        if (matches.length === 0) {
-          results.append(el('p', { class: 'calc-none', text: 'Nothing fits those constraints.' }));
-        }
-        for (const mask of matches) {
-          const row = el('button', {
-            class: `calc-combo${struck.has(mask) ? ' struck' : ''}`,
-            type: 'button',
-            title: 'Tap to rule this one out',
-          });
-          for (const digit of digitsOf(mask)) {
-            row.append(
-              el('span', {
-                class: blocked & bit(digit) ? 'blocked' : placed & bit(digit) ? 'placed' : '',
-                text: String(digit),
-              }),
-            );
-          }
-          row.addEventListener('click', () => {
-            if (struck.has(mask)) struck.delete(mask);
-            else struck.add(mask);
-            run2();
-          });
-          results.append(row);
-        }
       }
 
-      remaining = matches.filter((mask) => !struck.has(mask));
-      pencil.disabled = remaining.length !== 1 || open.length === 0;
-      hold();
-    }
-
-    /*
-     * The list is the only thing here that changes size, and filtering it down
-     * used to shrink the panel — moving the buttons underneath while you were
-     * still aiming at them. Held at the tallest it has needed, so ruling
-     * digits out empties space rather than collapsing it.
-     */
-    let floor = 0;
-    function hold(): void {
-      if (!results.isConnected) return;
-      results.style.height = 'auto';
-      floor = Math.max(floor, results.scrollHeight + 2);
-      results.style.height = `${floor}px`;
-    }
-
-    sumField.addEventListener('input', run2);
-    sizeField.addEventListener('input', run2);
-
-    const reset = el('button', { class: 'calc-btn', type: 'button', text: 'Reset' });
-    reset.addEventListener('click', () => {
-      for (let digit = 1; digit <= 9; digit++) {
-        state[digit] = 'neutral';
-        keyNodes[digit - 1].className = keyFor(digit);
-      }
-      struck.clear();
-      sumField.value = String(left);
-      sizeField.value = String(open.length);
-      run2();
-    });
-
-    pencil.addEventListener('click', () => {
-      if (remaining.length !== 1) return;
-      onPencil(run, remaining[0]);
-      pencil.disabled = true;
-    });
-
-    const tabs = el('div', { class: 'calc-tabs', role: 'tablist' });
-    for (const option of runs) {
-      const chosen = option === run;
-      const tab = el('button', {
-        class: `calc-tab${chosen ? ' on' : ''}`,
-        type: 'button',
-        role: 'tab',
-        'aria-selected': String(chosen),
-        text: `${option.sum} ${option.dir}`,
+      let held = false;
+      let timer: number | undefined;
+      chip.addEventListener('pointerdown', () => {
+        held = false;
+        timer = window.setTimeout(() => {
+          held = true;
+          const key = run.clue * 4 + (run.dir === 'across' ? 0 : 1);
+          const set = this.struck.get(key) ?? new Set<number>();
+          if (set.has(mask)) set.delete(mask);
+          else set.add(mask);
+          this.struck.set(key, set);
+          this.paint();
+        }, 400);
       });
-      tab.addEventListener('click', () => {
-        current = option;
-        render(body);
+      const stop = (): void => window.clearTimeout(timer);
+      chip.addEventListener('pointerleave', stop);
+      chip.addEventListener('pointercancel', stop);
+      chip.addEventListener('pointerup', () => {
+        stop();
+        if (!held) this.onPencil(run, mask);
       });
-      tabs.append(tab);
+      list.append(chip);
     }
 
-    body.replaceChildren(
-      tabs,
-      el('p', {
-        class: 'calc-lede',
-        text:
-          open.length === 0
-            ? 'This run is full.'
-            : `${left} left in ${open.length} cell${open.length === 1 ? '' : 's'}` +
-              (placed ? `, with ${digitsOf(placed).join(', ')} already in` : ''),
-      }),
-      el('div', { class: 'calc-controls' }, keys, fields),
-      results,
-      el('div', { class: 'calc-foot' }, reset, pencil),
+    row.append(
+      el('span', { class: 'combos-left', text: `${left} in ${open.length}` }),
+      list,
     );
-    run2();
-    queueMicrotask(hold);
+    return row;
   }
 }

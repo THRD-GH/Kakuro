@@ -15,8 +15,8 @@ is about 110 kB and works on a train from the first run.
 
 `npm run build` regenerates `dist/sw.js` from the actual build output, so the
 precache list always matches the hashed filenames. `npm run icons` redraws the
-app icons; `npm run packs` rebuilds the Classic collection and `npm run verify`
-checks it.
+app icons, and `npm run verify` generates across the whole board-by-level
+matrix and reports what each pair costs.
 
 ## Rules
 
@@ -45,10 +45,13 @@ survive that but a two-figure clue in half of one does not, and it is well
 under the size a thumb can hit. Large and Huge boards therefore open zoomed on
 a narrow screen, scrolling inside their pane with the cursor kept in view.
 
-**The table** under the board lists every combination that still fits the two
-clues through the selected cell, with the digits already written in taken out
-of both the total and the alphabet — so a 23 across with a 6 in it shows the
-ways to make 17 in what is left. Table folds it away.
+**The table** is a strip over the foot of the board showing what can still go
+in the cell you are on — both clues through it at once, with the digits already
+written taken out of the total and out of the alphabet, so a 23 across with a 6
+in it lists the ways to make 17 in the cells that are left. It follows the
+cursor as you move, tap a combination to pencil it into the run, hold one to
+rule it out, and Table folds it away. It is read against the grid, so it never
+covers it: about a tenth of the screen against the board's half.
 
 **Hint** names the technique that cracks the position, explains why it works
 and tints the cells it is talking about; it only writes the digit in if asked.
@@ -93,10 +96,6 @@ easiest kind of 20×20 rather than a 9×9 stretched out, and every level exists
 on every board by construction. The band edges are the sextiles of what the
 generator really produces on each board; `node tools/bands.ts` refits them.
 `node tools/matrix.ts` prints which pairs are reachable.
-
-Six levels, the same white-belt-to-1st-Dan ladder as the rest of the
-collection, and they mean something specific here: **a level is a rung of the
-technique ladder.**
 
 Difficulty is measured in two parts: the dearest technique the grid forces, and
 how much of the grid actually needed it. The second is measured by taking the

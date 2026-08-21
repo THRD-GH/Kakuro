@@ -120,3 +120,43 @@ export function bindTap(node: HTMLElement, options: TapOptions): void {
   node.addEventListener('dblclick', (e) => e.preventDefault());
   node.addEventListener('contextmenu', (e) => e.preventDefault());
 }
+
+/**
+ * Drag to pan a scrolling pane, for the zoomed board.
+ *
+ * Touch is left alone: a finger already pans the pane natively, with momentum,
+ * and handling it here as well would move it twice. This is for the mouse,
+ * where the only way to move a zoomed board was the scrollbar — and the
+ * combination bar sits over the bottom edge of the pane, which is exactly
+ * where the horizontal one lives.
+ */
+export function bindPan(pane: HTMLElement): void {
+  let from: { x: number; y: number; left: number; top: number } | null = null;
+
+  pane.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch') return;
+    if (e.button !== 0) return;
+    from = { x: e.clientX, y: e.clientY, left: pane.scrollLeft, top: pane.scrollTop };
+  });
+
+  pane.addEventListener('pointermove', (e) => {
+    if (!from) return;
+    const dx = e.clientX - from.x;
+    const dy = e.clientY - from.y;
+    // Below the threshold this is still a click on a cell, not a drag.
+    if (!pane.classList.contains('panning') && Math.abs(dx) + Math.abs(dy) < 6) return;
+    pane.classList.add('panning');
+    pane.setPointerCapture(e.pointerId);
+    pane.scrollLeft = from.left - dx;
+    pane.scrollTop = from.top - dy;
+    e.preventDefault();
+  });
+
+  const release = (e: PointerEvent): void => {
+    from = null;
+    pane.classList.remove('panning');
+    if (pane.hasPointerCapture(e.pointerId)) pane.releasePointerCapture(e.pointerId);
+  };
+  pane.addEventListener('pointerup', release);
+  pane.addEventListener('pointercancel', release);
+}

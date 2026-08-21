@@ -10,7 +10,7 @@ import type { AppContext } from './app-context.ts';
 import { Board } from './board.ts';
 import { CombosBar } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
-import { bindTap } from './pointer.ts';
+import { bindPan, bindTap } from './pointer.ts';
 import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
 
 export class PlayScreen {
@@ -36,6 +36,7 @@ export class PlayScreen {
   private paused = false;
   /** How far down the current line of reasoning Hint has walked. */
   private hintDepth = 0;
+  private barWatch: ResizeObserver | null = null;
   private ticker: number | null = null;
   private saveTimer: number | null = null;
   private finished = false;
@@ -114,6 +115,23 @@ export class PlayScreen {
      * a two-figure clue in half of that is not, and it is below the size a
      * thumb can hit. On anything wider there is room to show the whole board.
      */
+    const pane = this.node.querySelector<HTMLElement>('.board-wrap');
+    if (pane) bindPan(pane);
+
+    /*
+     * The bar floats over the foot of the board, which is where a scroll pane
+     * keeps its horizontal scrollbar and where the last row of cells sits.
+     * Reserving its height under the board lets both be scrolled clear of it,
+     * and a ResizeObserver keeps that in step as the bar grows and shrinks
+     * with what it has to say.
+     */
+    const area = this.node.querySelector<HTMLElement>('.board-area');
+    const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
+    if (area && bar && typeof ResizeObserver !== 'undefined') {
+      this.barWatch = new ResizeObserver(() => this.measureBar());
+      this.barWatch.observe(bar);
+    }
+
     this.applyCombosSetting();
     this.setZoom(puzzle.size >= 16 && window.innerWidth < 520);
     this.tick();
@@ -126,8 +144,25 @@ export class PlayScreen {
     this.game.start();
   }
 
+  /**
+   * How much room the bar needs under the board.
+   *
+   * Measured rather than inferred from the setting: a folded bar is
+   * `display: none` and measures zero on its own, which is the right answer
+   * without a special case. It has to be taken while the tree is in the
+   * document, though — measured in the constructor, before main.ts appends it,
+   * everything is zero and the gutter never appeared.
+   */
+  private measureBar(): void {
+    const area = this.node.querySelector<HTMLElement>('.board-area');
+    const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
+    if (!area || !bar) return;
+    area.style.setProperty('--bar-h', `${Math.round(bar.offsetHeight)}px`);
+  }
+
   /** Called once the play tree is in the document, so the selected cell can take focus. */
   attached(): void {
+    this.measureBar();
     if (this.finished) return;
     if (this.board.selection >= 0) this.board.select(this.board.selection);
     this.undoButton.disabled = !this.game.canUndo;
@@ -251,7 +286,9 @@ export class PlayScreen {
 
   private applyCombosSetting(): void {
     const open = this.app.settings.showCombos;
-    this.node.querySelector('.combos-wrap')?.classList.toggle('folded', !open);
+    const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
+    bar?.classList.toggle('folded', !open);
+    this.measureBar();
     this.tableButton?.setAttribute('aria-pressed', String(open));
     this.tableButton?.classList.toggle('on', open);
   }
@@ -694,6 +731,8 @@ export class PlayScreen {
   }
 
   destroy(): void {
+    this.barWatch?.disconnect();
+    this.barWatch = null;
     if (this.ticker !== null) window.clearInterval(this.ticker);
     this.ticker = null;
     this.pause();

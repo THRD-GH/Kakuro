@@ -454,6 +454,20 @@ p {
   overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  cursor: grab;
+  /*
+   * Room under the board for the combination bar, which floats over the foot
+   * of this pane — exactly where a scroll pane keeps its horizontal scrollbar
+   * and where the last row of cells sits. Without it, turning the table on
+   * covered both and the puzzle could not be moved. play.ts keeps this in step
+   * with the bar's real height.
+   */
+  padding-bottom: var(--bar-h, 0px);
+}
+
+.board-wrap.zoomed.panning {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .board-wrap.zoomed .cell {

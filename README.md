@@ -44,6 +44,10 @@ Fitted to a phone, a 20×20 gives each cell about fifteen pixels: the answers
 survive that but a two-figure clue in half of one does not, and it is well
 under the size a thumb can hit. Large and Huge boards therefore open zoomed on
 a narrow screen, scrolling inside their pane with the cursor kept in view.
+A finger pans it natively; a mouse drags it, since the alternative was the
+scrollbar and the combination bar floats over exactly where that lives. The
+bar also reserves its own height under the board, so the bottom row can always
+be scrolled clear of it.
 
 **The table** is a strip over the foot of the board showing what can still go
 in the cell you are on, both clues through it at once. A combination reads as

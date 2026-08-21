@@ -65,6 +65,19 @@ None of it costs the board anything: on a phone the grid is limited by the
 width of the screen long before its height, so the block grew by 51px into
 space that was already slack.
 
+**Beside the board**, on anything wider than a phone, the controls and the
+table share a column of their own. The table used to stay an overlay there
+too, pinned to the foot of a board area far taller than the board, which left
+it stranded halfway down the window with the whole of the second column empty
+above it. It is read against the grid, so it belongs next to the grid.
+
+The play screen is also allowed the whole window rather than the 56rem the
+menus use. 56rem is a reading width, right for text; but the board is square
+and takes its size from the *narrower* side of what it is given, so capping
+the width capped the board — 556px of grid with 368px of height going spare,
+and a 20×20 cell down at 28px for no reason. Uncapped it is 744px and 36px.
+The menus stay where they were.
+
 Undo, redo, zoom and pause are drawn rather than typed. As text glyphs they
 were a gamble on the font — `↶` and `↷` are missing from several UI faces and
 arrive as a box, or at a different weight and baseline from the labels beside

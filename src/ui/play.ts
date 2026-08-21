@@ -30,6 +30,8 @@ export class PlayScreen {
   private hintNote: HTMLElement;
 
   private zoomed = false;
+  /** The same breakpoint the stylesheet uses to put the controls beside the board. */
+  private wide = window.matchMedia('(min-width: 46rem) and (min-height: 34rem)');
   private zoomButton!: HTMLButtonElement;
   private pauseButton!: HTMLButtonElement;
   private tableButton!: HTMLButtonElement;
@@ -112,7 +114,12 @@ export class PlayScreen {
           el('div', { class: 'combos-wrap folded' }, this.combos.node),
         ),
       ),
-      this.controls(),
+      /*
+       * Beside the board on a wide screen this column holds the table as well
+       * as the controls; on a phone it is `display: contents` and the controls
+       * are a child of `.play` exactly as before.
+       */
+      el('div', { class: 'side' }, this.controls()),
     );
 
     /*
@@ -138,6 +145,17 @@ export class PlayScreen {
       this.barWatch.observe(bar);
     }
 
+    this.placeCombos();
+    /*
+     * `resize` as well as the media query's own `change`. The query is the
+     * honest signal and fires on a rotation, but it did not fire at all under
+     * a viewport resized out from under the page, which left the table parked
+     * in a column that no longer existed — below the keypad, in the flow,
+     * taking a fifth of a phone screen. `placeCombos` is a parent check, so
+     * calling it twice costs nothing.
+     */
+    this.wide.addEventListener('change', this.replace);
+    window.addEventListener('resize', this.replace);
     this.applyCombosSetting();
     this.setZoom(puzzle.size >= 16 && window.innerWidth < 520);
     this.tick();
@@ -148,6 +166,27 @@ export class PlayScreen {
     }
     this.select(this.firstEmpty());
     this.game.start();
+  }
+
+  /**
+   * The table has two homes and the layout decides which.
+   *
+   * Over the foot of the board on a phone, where there is nowhere else for it
+   * to go. Beside the board on a wide screen, under the controls: floating, it
+   * sat at the bottom of a board area much taller than the board and ended up
+   * stranded halfway down the window, with the whole of the second column
+   * empty above it. Read against the grid it belongs next to the grid.
+   */
+  private replace = (): void => this.placeCombos();
+
+  private placeCombos(): void {
+    const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
+    const side = this.node.querySelector<HTMLElement>('.side');
+    const overlays = this.node.querySelector<HTMLElement>('.board-overlays');
+    if (!bar || !side || !overlays) return;
+    const home = this.wide.matches ? side : overlays;
+    if (bar.parentElement !== home) home.append(bar);
+    this.measureBar();
   }
 
   /**
@@ -163,12 +202,14 @@ export class PlayScreen {
     const area = this.node.querySelector<HTMLElement>('.board-area');
     const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
     if (!area || !bar) return;
-    area.style.setProperty('--bar-h', `${Math.round(bar.offsetHeight)}px`);
+    // Nothing is owed when the bar is beside the board rather than over it.
+    const over = area.contains(bar);
+    area.style.setProperty('--bar-h', over ? `${Math.round(bar.offsetHeight)}px` : '0px');
   }
 
   /** Called once the play tree is in the document, so the selected cell can take focus. */
   attached(): void {
-    this.measureBar();
+    this.placeCombos();
     if (this.finished) return;
     if (this.board.selection >= 0) this.board.select(this.board.selection);
     this.undoButton.disabled = !this.game.canUndo;
@@ -744,6 +785,8 @@ export class PlayScreen {
   destroy(): void {
     this.barWatch?.disconnect();
     this.barWatch = null;
+    this.wide.removeEventListener('change', this.replace);
+    window.removeEventListener('resize', this.replace);
     if (this.ticker !== null) window.clearInterval(this.ticker);
     this.ticker = null;
     this.pause();

@@ -742,6 +742,14 @@ p {
 /* ---------------------------------------------------- the combination bar */
 
 /*
+ * On a phone the side column is not a box at all: the controls go straight
+ * back to being a child of `.play`, which is what the column layout expects.
+ */
+.side {
+  display: contents;
+}
+
+/*
  * A strip over the foot of the board, not a panel over the whole screen. It is
  * read against the grid and it follows the cursor, so it has to leave the grid
  * visible: the panel it replaced took 59% of a phone and hid the board behind
@@ -1437,6 +1445,18 @@ p {
     max-width: 56rem;
   }
 
+  /*
+   * The play screen alone is allowed the whole window. 56rem is a reading
+   * width — right for the menus, which are text — but the board is square and
+   * takes its size from the *narrower* side of what it is given, so capping
+   * the width caps the board: 556px of grid in a column with 924px of height
+   * going spare, and a 20x20 cell down at 28px for no reason. The menus stay
+   * where they are.
+   */
+  #app:has(.play) {
+    max-width: 82rem;
+  }
+
   .play {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 19rem;
@@ -1455,15 +1475,46 @@ p {
   }
 
   /*
+   * The second column is a real column now: the controls at the top and the
+   * table under them, sharing the height with the board rather than leaving
+   * five hundred pixels of nothing beside it.
+   */
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  /*
    * The block keeps its two columns beside the board. Stacking them was right
    * when it was two three-by-threes, but the digits, the actions and the
    * editing strip stacked leaves each of them the full width of the column —
    * a 98x44 digit, which is a letterbox, not a key.
    */
   .controls {
-    grid-column: 2;
-    grid-row: 2;
-    align-self: start;
+    flex: 0 0 auto;
+  }
+
+  /*
+   * Beside the board it is a panel, not an overlay: no shadow cast over a
+   * grid it is no longer on top of, and free to use the height of the column
+   * instead of a fraction of the board.
+   */
+  .side > .combos-wrap {
+    flex: 0 1 auto;
+    max-height: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    background: var(--panel);
+  }
+
+  /* Flush with the top of the controls, rather than floating in the middle of
+     a column much taller than it is. */
+  .board-wrap {
+    place-items: start center;
   }
 }
 

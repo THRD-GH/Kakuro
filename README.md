@@ -39,10 +39,18 @@ why there is no Notes mode.
 | Long-click Clear | Empty the cell |
 | Marks | Pencil in what is possible in every cell — no further |
 
-Keyboard: arrows move, `1`–`9` toggle, `Shift`+digit forces, `Backspace`
-clears, `M` fills the marks, `Z` undoes, `Y` redoes. When Check, Hint or Clear
-is set to need a hold, the matching keys are `Shift+C`, `Shift+H` and
-`Shift+Backspace`.
+Keyboard: arrows move, `1`–`9` toggle, `Shift`+digit forces, `Delete` or
+`Backspace` clears, `M` fills the marks, `Z` undoes, `Y` redoes. When Check or
+Hint is set to need a hold, the matching keys are `Shift+C` and `Shift+H`.
+
+Clear has no keyboard guard, whatever the button is set to. The guard is there
+because a 44px button is easy to catch with a thumb on the way to something
+else; a key press is neither easy to make by accident nor ambiguous about
+which key it was, and rubbing a cell out costs nothing and undoes. Held to the
+setting, `Delete` did not clear the cell and was swallowed doing nothing —
+the guard broke out of the handler after the keystroke had already been
+claimed. Check and Hint keep their `Shift`, because those two are counted
+against the puzzle and cannot be given back.
 
 The block itself is laid out as the sudoku games lay theirs out: the digits
 in a pad of their own, Clear and the undo pair across its foot, and the six

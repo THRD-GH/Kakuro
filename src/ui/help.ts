@@ -29,7 +29,7 @@ export function openHelp(): void {
       'A cell holds a set of digits: one shows as an answer, two or more show as pencil marks. Tap a cell to select it, then tap digits to put them in and out of that set — so tapping a second digit turns an answer into two marks, and crossing marks off until one is left answers the cell.',
       'Hold a digit, or double-tap it, to say straight out that it is the answer. Only that strikes the digit off the marks in the rest of both runs; a plain tap never changes anything outside its own cell.',
       'Marks pencils in what is possible in every cell at once — the digits not already in one of its runs that could still make that run add up. Narrowing them down from there is the puzzle, so it stops at what the rules allow. Long-click Clear empties the cell.',
-      'Keyboard: arrows move, 1–9 toggle, Shift and a digit forces, Backspace clears, M fills the marks, Z undoes, Y redoes. When Check, Hint or Clear is set to need a hold, the keyboard uses Shift with C, H or Backspace.',
+      'Keyboard: arrows move, 1–9 toggle, Shift and a digit forces, Delete or Backspace clears, M fills the marks, Z undoes, Y redoes. When Check or Hint is set to need a hold, the keyboard uses Shift with C or H — Clear is never guarded on a keyboard, where a key press is deliberate and rubbing a cell out undoes anyway.',
     ]),
     section('The table', [
       'The strip under the board lists every combination that still fits the two clues through the cell you are on — with the digits already written in taken out of both the total and the alphabet.',

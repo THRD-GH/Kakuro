@@ -477,10 +477,23 @@ export class PlayScreen {
       case 'ArrowRight':
         this.move(0, 1);
         break;
+      /*
+       * Always, whatever Clear's guard is set to.
+       *
+       * That guard exists because a 44px button is easy to catch with a thumb
+       * on the way to something else. A key press is neither easy to make by
+       * accident nor ambiguous about which key it was, and rubbing a cell out
+       * costs nothing and undoes. Held to the setting, `Delete` did not clear
+       * the cell — and, worse, was swallowed doing nothing, because the guard
+       * broke out of the switch and the keystroke was already claimed.
+       *
+       * Check and Hint keep their Shift: those two are counted against the
+       * puzzle, so pressing one by accident takes something that cannot be
+       * given back.
+       */
       case 'Backspace':
       case 'Delete':
       case '0':
-        if (this.app.settings.clearNeedsHold && !e.shiftKey) break;
         this.eraseCell();
         break;
       case 'm':

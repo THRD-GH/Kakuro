@@ -200,6 +200,30 @@ Puzzles are generated on demand rather than shipped: there is no Classic and
 New split, just a board, a level and a number. Every number is the same grid on
 every device, so a link or a saved game still names one particular puzzle.
 
+**500 numbers to each board and level**, so 12,000 puzzles, none of which are
+downloaded or stored — the pool is a bound on which numbers may be asked for,
+not a collection sitting somewhere. Raising it cannot disturb what is already
+there, because a grid is seeded from its size, level and number and nothing
+else: number 158 was the same puzzle when the pool was 400. `node
+tools/pool.ts` generates past the current bound and reports what fails, what
+lands off its band, and what it costs.
+
+A puzzle is printed as `KAH1-373` — Kakuro, **H**uge, white belt, number 373.
+The board is a letter: S, M, L, H. It used to be left out on the grounds that
+the board was on screen beside the id wherever the id appeared, and that
+stopped being true as more places came to print it — the picker's
+confirmation, its toast, the loading line and the menu's `Last:` all show a
+bare code with nothing else around it. Worse, the code was ambiguous without
+it: numbers run 1..500 inside one board *and* level, so a 9×9 white belt 158
+and a 20×20 white belt 158 are different puzzles that printed the same name.
+The letter rather than `20` matches the family, where the sudoku variants
+print `XJHC6-1`.
+
+Each level on the menu says how many of its 500 are left, and how many are
+done once any are. `unplayed` said nothing about how much there was, and
+`1 done` said nothing about how much was not — neither answers the question
+the row is really asked, which is whether there is more of this to play.
+
 **The ladder is calibrated to each board.** That is not a shortcut, it is the
 only honest way to offer six levels on four boards: a 20×20 that falls to the
 combination union *everywhere* does not exist, because somewhere in two hundred

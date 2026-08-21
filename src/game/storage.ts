@@ -22,7 +22,7 @@ const KEY = {
  * only bounds the numbering so "puzzles you have not played" stays a
  * meaningful set rather than an infinity.
  */
-export const POOL_SIZE = 400;
+export const POOL_SIZE = 500;
 
 export type Theme = 'night' | 'day' | 'contrast';
 

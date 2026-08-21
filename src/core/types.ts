@@ -106,9 +106,23 @@ export function parsePuzzleId(raw: string): PuzzleId | null {
 export const samePuzzle = (a: PuzzleId, b: PuzzleId): boolean =>
   formatPuzzleId(a) === formatPuzzleId(b);
 
+/** Small, Medium, Large, Huge — the board, in one character. */
+export const SIZE_INITIALS: Record<Size, string> = { 9: 'S', 12: 'M', 16: 'L', 20: 'H' };
+
 /**
- * The id as dandoku.com prints it, KA for Kakuro. The size is left out: it is
- * on screen beside this in every place the id appears, as `12×12`, and a
- * reader who wants to know how big the board is can see the board.
+ * The id as dandoku.com prints it: KA for Kakuro, then the board, the level
+ * and the number — `KAH1-373` is the 373rd white belt on the 20×20.
+ *
+ * The board used to be left out, on the grounds that it was on screen beside
+ * the id everywhere the id appeared. That stopped being true as more places
+ * started printing it: the picker's confirmation, its toast, the loading line
+ * and the menu's Last: all show a bare code with no board anywhere near it.
+ * And the code was ambiguous without it — numbers run 1..POOL_SIZE within one
+ * board *and* level, so a 9×9 white belt 158 and a 20×20 white belt 158 are
+ * different puzzles that printed the same name.
+ *
+ * A letter rather than `20`, to match the family: the sudoku variants print
+ * `XJHC6-1`, letters for what kind of puzzle it is, then level and number.
  */
-export const displayPuzzleId = (id: PuzzleId): string => `KA${id.level}-${id.number}`;
+export const displayPuzzleId = (id: PuzzleId): string =>
+  `KA${SIZE_INITIALS[id.size]}${id.level}-${id.number}`;

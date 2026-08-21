@@ -308,6 +308,17 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+/* How many are finished, under how many are left — quieter, and gone entirely
+   until there is one, so an untouched level is two lines rather than three. */
+.level-done:empty {
+  display: none;
+}
+
+.level-done {
+  font-size: 0.66rem;
+  opacity: 0.75;
+}
+
 .belt {
   width: 0.85rem;
   height: 2.1rem;

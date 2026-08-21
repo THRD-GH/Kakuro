@@ -112,6 +112,7 @@ function levelRow(app: AppContext, level: Level): HTMLElement {
   const belt = BELTS[level - 1];
   const size: Size = app.size;
   const done = finishedCount(app.history, { size, level }, app.poolSize);
+  const left = app.poolSize - done;
 
   const row = el('button', { class: 'level-row', type: 'button' });
   row.append(
@@ -126,7 +127,14 @@ function levelRow(app: AppContext, level: Level): HTMLElement {
       'span',
       { class: 'level-meta' },
       el('b', { text: `${'★'.repeat(level)}${'☆'.repeat(6 - level)}` }),
-      el('span', { text: done > 0 ? `${done} done` : 'unplayed' }),
+      /*
+       * What is left rather than what is done. `unplayed` said nothing about
+       * how much there was, and `1 done` said nothing about how much was not
+       * — neither answers the question the row is actually asked, which is
+       * whether there is more of this to play.
+       */
+      el('span', { text: `${left} left` }),
+      el('span', { class: 'level-done', text: done > 0 ? `${done} done` : '' }),
     ),
   );
   row.addEventListener('click', () => app.playRandom(level));

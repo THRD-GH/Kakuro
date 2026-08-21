@@ -211,8 +211,69 @@ const MAX_SAVES = 12;
 
 type SaveTable = Record<string, SavedGame>;
 
+/**
+ * The saved games, with anything left from an older id format brought into
+ * the current one.
+ *
+ * A save is filed under `formatPuzzleId` of its id, and that format has
+ * changed twice: the board size went into it, and the Classic/New letter came
+ * out. A save written under an older one sits under a key the current code
+ * cannot compute — `6-N49` against the `20-6-49` it now works out — so
+ * `dropSave` deleted nothing, the toast said the game had gone, and the row
+ * was back the moment the list redrew. It could not be picked up either:
+ * with no `size` on its id there was no board to build, which is what
+ * `undefined×undefined` in the picker was saying out loud.
+ *
+ * They are repaired rather than thrown away. The size is recoverable because
+ * the save carries the whole puzzle and that has it, so a half-finished game
+ * from an older build survives its own filing system.
+ */
 function loadSaves(): SaveTable {
-  return read<SaveTable>(KEY.save, {});
+  const raw = read<SaveTable>(KEY.save, {});
+  const table: SaveTable = {};
+  let changed = false;
+
+  for (const [key, save] of Object.entries(raw)) {
+    const id = filedAs(save);
+    if (!id) {
+      // No size on the id and none on the puzzle either: there is no board
+      // this could open, so there is nothing to keep.
+      changed = true;
+      continue;
+    }
+
+    const proper = formatPuzzleId(id);
+    const stale = save.id?.size === undefined;
+    if (stale || proper !== key) changed = true;
+
+    /*
+     * Two old keys can land on one new one — the Classic and the New of a
+     * number, back when those were different puzzles. Whichever was put down
+     * last is the one still being played.
+     */
+    const sitting = table[proper];
+    if (sitting) {
+      changed = true;
+      if ((sitting.savedAt ?? 0) >= (save.savedAt ?? 0)) continue;
+    }
+    table[proper] = stale ? { ...save, id } : save;
+  }
+
+  if (changed) write(KEY.save, table);
+  return table;
+}
+
+/** The id a save should be filed under, or null if it cannot be worked out. */
+function filedAs(save: SavedGame | null | undefined): PuzzleId | null {
+  // Anything read back out of storage is only a shape until it is checked.
+  const id = save?.id as Partial<PuzzleId> | undefined;
+  const level = id?.level;
+  const number = id?.number;
+  const size = id?.size ?? save?.puzzle?.size;
+  if (typeof size !== 'number' || !isSize(size)) return null;
+  if (typeof level !== 'number' || !Number.isInteger(level) || level < 1 || level > 6) return null;
+  if (typeof number !== 'number' || !Number.isInteger(number) || number < 1) return null;
+  return { size, level: level as PuzzleId['level'], number };
 }
 
 export function loadSaveFor(id: PuzzleId): SavedGame | null {

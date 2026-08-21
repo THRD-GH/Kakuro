@@ -295,6 +295,17 @@ away, and `node tools/prof.ts` where the time goes.
 - `tools/` — the pack builder, the verifier, the icon drawer, and the
   measurement scripts the level bands were set from
 
+A save is filed under its printed id, and that id has been through three
+formats: `level-Nnumber`, then with the board size in front of it, then with
+the Classic/New letter taken out. A save written under an older one sat under
+a key the current code could not work out, so throwing it away deleted nothing
+and the row came back the moment the list redrew — while the toast said it had
+gone. It could not be picked up either: with no size on its id there was no
+board to build, which is what `undefined×undefined` in the picker was saying.
+They are re-filed on load rather than binned, because the size is recoverable
+from the puzzle the save carries; where two old keys land on one new one, the
+game played most recently is the one kept.
+
 Storage is namespaced `kk:v1:` and only ever prunes its own keys: the DanDoku
 games share one origin, and a game that tidied up `localStorage` generally
 would be deleting another game's saves. Classic puzzles are read from the

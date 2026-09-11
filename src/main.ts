@@ -230,6 +230,11 @@ class App implements AppContext {
    * menu comes back. Only from the bare menu does back leave.
    */
   private guarded = false;
+  /**
+   * A back() this app asked for itself, to spend the entry it was holding. The
+   * popstate it causes is not somebody pressing back, and must not be read as
+   * one.
+   */
   private spending = false;
   private onMenu = true;
 
@@ -237,40 +242,67 @@ class App implements AppContext {
     onOverlayOpen(() => this.arm());
     onOverlayClose(() => this.syncGuard());
     window.addEventListener('popstate', () => {
+      // Our own doing, and already acted on before it was asked for.
       if (this.spending) {
         this.spending = false;
         return;
       }
-      this.guarded = false;
       if (closeTopOverlay()) {
-        this.syncGuard();
+        // The panel took the press. Whether what is underneath wants another
+        // entry is for the close hook, which has just queued the question.
+        this.guarded = false;
         return;
       }
-      if (!this.onMenu) {
-        this.goMenu();
-        return;
-      }
-      // Nothing left to close: let the press through by not re-arming.
+      // Not an entry we were holding, so there is nothing of ours to spend.
+      if (!this.guarded) return;
+      this.guarded = false;
+      if (!this.onMenu) this.goMenu();
     });
   }
 
   private arm(): void {
     if (this.guarded) return;
-    this.guarded = true;
+    // A fresh entry, so the next popstate belongs to whoever presses back: a
+    // back() of ours that the browser quietly refused must not leave the flag
+    // standing, to swallow the next real press.
+    this.spending = false;
     window.history.pushState({ kakuro: true }, '');
+    this.guarded = true;
   }
 
-  private release(): void {
-    if (!this.guarded) return;
-    this.guarded = false;
-    this.spending = true;
-    window.history.back();
-  }
+  /**
+   * Match the entry we hold to the screen, once the dust has settled.
+   *
+   * Deferred by a microtask, as killer-sudoku learned to, because closing a
+   * panel is so often the first half of going somewhere. Picking a game from
+   * the unfinished list closes the list and opens the puzzle in the same
+   * breath. Judged at the moment of the close, the bare menu wanted no entry,
+   * so this asked the browser to go back — and then the puzzle wanted one and
+   * pushed another. A back() only lands on a later turn of the loop, so it
+   * landed after the push and took the entry away, while the app still
+   * believed it held one. The next press of ← spent an entry that was not
+   * there: history.back() from the bottom of the app's own history, which is
+   * the browser's back — out of the game and off the site.
+   *
+   * Judged once, after both halves, the list's entry simply carries over to
+   * the puzzle and nothing moves. Coalesced, because a single tap can ask
+   * several times — the close hook, and then the screen it opens.
+   */
+  private syncQueued = false;
 
   private syncGuard(): void {
-    const wanted = overlaysOpen() > 0 || !this.onMenu;
-    if (wanted) this.arm();
-    else this.release();
+    if (this.syncQueued) return;
+    this.syncQueued = true;
+    queueMicrotask(() => {
+      this.syncQueued = false;
+      const wanted = overlaysOpen() > 0 || !this.onMenu;
+      if (wanted) this.arm();
+      else if (this.guarded) {
+        this.guarded = false;
+        this.spending = true;
+        window.history.back();
+      }
+    });
   }
 }
 

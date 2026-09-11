@@ -5,8 +5,8 @@ import { el } from './dom.ts';
 import { openOverlay } from './overlay.ts';
 
 const THEMES: { value: Theme; label: string; note: string }[] = [
-  { value: 'day', label: 'Day', note: 'Cream stock, black ink' },
-  { value: 'night', label: 'Night', note: 'The same board by lamplight' },
+  { value: 'day', label: 'Day', note: 'Warm stock, navy ink' },
+  { value: 'night', label: 'Night', note: 'The same board in navy, by lamplight' },
   { value: 'contrast', label: 'Contrast', note: 'Pure black, colour-blind safe' },
 ];
 

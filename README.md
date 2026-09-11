@@ -182,7 +182,36 @@ and there is nowhere else to point. Both are sums the player could do unaided,
 so neither gives anything away.
 
 Neither is coloured *ink*: a clue square is the one place on the board with no
-contrast to spare, and green digits on black could not be read.
+contrast to spare, and green digits on the dark clue squares could not be read.
+
+## The look
+
+Kakuro wears the DanDoku house style, taken from killer-sudoku and Sudoku
+Variants rather than invented here, so the three read as one family: navy ink
+`#17273d` on warm stock `#f4efe5`, square corners, hard offset shadows and no
+blur anywhere, and a monospace for the things that label rather than speak —
+the app's name, the kicker, a belt's rank, a puzzle's code, the counts.
+
+It had its own cream and near-black before, a wordmark instead of a title bar,
+and coloured rectangles for belts. Next to the other games it looked like a
+different app. The menu now opens the way theirs do: a title bar framed in 2px
+of ink, a kicker under a coral dash, a big tight title, and the belts drawn as
+belts, from the same paths as killer's so a brown belt is the same brown belt
+in every game. Each level reads down the left in killer's three lines — belt
+and name, rank and what it stands for, what the puzzles ask — with what is
+left against the right-hand edge. Every row is the same 63px, so the list does
+not move under the eye.
+
+The one solid button on the page is the resume, under the levels rather than
+over them: it comes and goes with whether anything is unfinished, and sitting
+above the choices it moved the whole list down the screen when it did. One
+game goes straight back to it; several open the picker.
+
+The palette is global, because a navy menu in front of a brown board would be
+two apps again. The board's own meanings did not have to move — the cursor's
+ochre, the settled green and the red for a mistake were already the family's
+values — so only the ink changed: the clue squares are the navy of the text
+beside them.
 
 ## Boards and levels
 

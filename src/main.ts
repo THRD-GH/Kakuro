@@ -24,11 +24,12 @@ import { buildMenu } from './ui/menu.ts';
 import { closeAllOverlays, closeTopOverlay, onOverlayClose, onOverlayOpen, overlaysOpen, toast } from './ui/overlay.ts';
 import { PlayScreen } from './ui/play.ts';
 import { openSettings } from './ui/settings.ts';
+import { applyBackground } from './ui/backgrounds.ts';
 
 /** The browser chrome colour that matches each board, for the PWA title bar. */
 const THEME_COLOUR: Record<Theme, string> = {
-  night: '#0a0d10',
-  day: '#dfe4e9',
+  night: '#111c2b',
+  day: '#f4efe5',
   contrast: '#000000',
 };
 
@@ -50,6 +51,7 @@ class App implements AppContext {
   constructor(root: HTMLElement) {
     this.root = root;
     this.applyTheme();
+    this.applyBackground();
     this.guardBackButton();
 
     /*
@@ -212,6 +214,10 @@ class App implements AppContext {
   applyTheme(): void {
     document.documentElement.dataset.theme = this.settings.theme;
     setThemeColour(THEME_COLOUR[this.settings.theme]);
+  }
+
+  applyBackground(): void {
+    applyBackground(this.settings);
   }
 
   applyWakeLock(): void {

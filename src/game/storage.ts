@@ -49,6 +49,10 @@ export interface Settings {
   checkNeedsHold: boolean;
   hintNeedsHold: boolean;
   clearNeedsHold: boolean;
+  /** What sits behind the screens: 'none', a pattern's id, or 'custom' for a photo. */
+  background: string;
+  /** How far the page colour is laid over that image, 0 (none) to 1 (hidden). */
+  backgroundDim: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -65,6 +69,8 @@ export const DEFAULT_SETTINGS: Settings = {
   checkNeedsHold: true,
   hintNeedsHold: false,
   clearNeedsHold: true,
+  background: 'none',
+  backgroundDim: 0.55,
 };
 
 export interface PuzzleRecord {
@@ -116,6 +122,11 @@ export function loadSettings(): Settings {
   // A board that is no longer offered would leave the menu with nothing
   // selected and the level rows counting a pool that does not exist.
   if (!isSize(stored.size)) stored.size = DEFAULT_SETTINGS.size;
+  // A dim outside 0..1 is a hand-edited or corrupted store: clamp it, rather
+  // than paint the page a colour nobody asked for.
+  const dim = Number(stored.backgroundDim);
+  stored.backgroundDim = Number.isFinite(dim) ? Math.min(1, Math.max(0, dim)) : DEFAULT_SETTINGS.backgroundDim;
+  if (typeof stored.background !== 'string') stored.background = DEFAULT_SETTINGS.background;
   return stored;
 }
 

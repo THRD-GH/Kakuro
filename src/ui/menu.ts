@@ -3,28 +3,9 @@ import type { Level, Size } from '../core/types.ts';
 import { finishedCount, unfinishedSaves } from '../game/storage.ts';
 import { openResumePicker } from './resume-picker.ts';
 import type { AppContext } from './app-context.ts';
-import { belt } from './belt.ts';
+import { BELTS, belt } from './belt.ts';
 import { buildStamp, el } from './dom.ts';
-
-/**
- * The belts, as dandoku.com wears them: the same six names and the same six
- * descriptors across the collection, so a brown belt at killer means
- * something at kakuro too. What each one *asks* is Kakuro's own, off its
- * technique ladder — short phrases in killer's manner rather than sentences,
- * because they sit on the third line of a row in small type.
- *
- * The first two come down to the same technique, and so do the last two:
- * what separates them is how much of the grid holds out, which is what their
- * phrases say, rather than promising a technique that never arrives.
- */
-const BELTS: { name: string; rank: string; descriptor: string; asks: string }[] = [
-  { name: 'White belt', rank: '5th Kyū', descriptor: 'Foundations', asks: 'clues written only one way' },
-  { name: 'Yellow belt', rank: '4th Kyū', descriptor: 'Developing', asks: 'the same, over more of the grid' },
-  { name: 'Green belt', rank: '3rd Kyū', descriptor: 'Confident', asks: 'a digit with one home left' },
-  { name: 'Blue belt', rank: '2nd Kyū', descriptor: 'Advanced', asks: 'sums that will not write in' },
-  { name: 'Brown belt', rank: '1st Kyū', descriptor: 'Expert', asks: 'combinations dealt cell by cell' },
-  { name: 'Black belt', rank: '1st Dan', descriptor: 'Dan challenge', asks: 'dealing, sustained' },
-];
+import { openLevelInfo } from './level-info.ts';
 
 export function buildMenu(app: AppContext): HTMLElement {
   const node = el('div', { class: 'menu' });
@@ -85,11 +66,17 @@ export function buildMenu(app: AppContext): HTMLElement {
     node.append(resume);
   }
 
+  // One block at the foot, so that with a picture behind the menu the two
+  // lines of small print share one tile rather than sitting on the image.
   node.append(
-    // In the belts' own language, and true: every puzzle here has exactly one
-    // answer and can be finished by reasoning alone.
-    el('p', { class: 'hint-line', text: 'Every grid reasons out without a guess. The dojo never closes.' }),
-    el('footer', { class: 'menu-foot' }, el('span', { text: buildStamp() })),
+    el(
+      'div',
+      { class: 'menu-tail' },
+      // In the belts' own language, and true: every puzzle here has exactly
+      // one answer and can be finished by reasoning alone.
+      el('p', { class: 'hint-line', text: 'Every grid reasons out without a guess. The dojo never closes.' }),
+      el('footer', { class: 'menu-foot' }, el('span', { text: buildStamp() })),
+    ),
   );
   return node;
 }
@@ -122,13 +109,18 @@ function buildSizePicker(app: AppContext): HTMLElement {
 }
 
 /**
- * One belt, in killer's three lines down the left — the belt and its name,
- * the rank and what it stands for, what the puzzles will ask — and what is
- * left against the right-hand edge. The stars went: the belt already says
- * which level it is, and saying it twice took the width the counts needed.
+ * One belt: killer's three lines down the left — the belt and its name, the
+ * rank and what it stands for, what the puzzles will ask — with what is left
+ * against the right-hand edge, and its question mark at the end.
+ *
+ * Two buttons in one tile. The belt starts a puzzle, as the whole row always
+ * has; the ? explains the belt first. Killer puts its ? inside the belt's own
+ * lines, because there the lines are the explain button and the pools beside
+ * them are what play — here the lines are what play, and a button cannot sit
+ * inside a button, so the ? has a cell of its own.
  */
 function levelRow(app: AppContext, level: Level): HTMLElement {
-  const info = BELTS[level - 1];
+  const info = BELTS[level];
   const size: Size = app.size;
   const done = finishedCount(app.history, { size, level }, app.poolSize);
   const left = app.poolSize - done;
@@ -136,12 +128,12 @@ function levelRow(app: AppContext, level: Level): HTMLElement {
   const line = el('span', { class: 'belt-line' });
   line.append(belt(level, 40), el('span', { class: 'name', text: info.name }));
 
-  const row = el('button', {
-    class: 'level-row',
+  const play = el('button', {
+    class: 'level-play',
     type: 'button',
-    'aria-label': `${info.name}, ${info.rank} — ${info.asks}. ${left} left.`,
+    'aria-label': `Play ${info.name}, ${info.rank} — ${info.asks}. ${left} left.`,
   });
-  row.append(
+  play.append(
     el(
       'span',
       { class: 'level-head' },
@@ -162,6 +154,19 @@ function levelRow(app: AppContext, level: Level): HTMLElement {
       el('span', { class: 'level-done', text: done > 0 ? `${done} done` : '' }),
     ),
   );
-  row.addEventListener('click', () => app.playRandom(level));
-  return row;
+  play.addEventListener('click', () => app.playRandom(level));
+
+  const explain = el(
+    'button',
+    {
+      class: 'level-info',
+      type: 'button',
+      'aria-label': `What the ${info.name} asks`,
+      title: `What the ${info.name} asks`,
+    },
+    el('span', { class: 'level-info-badge', 'aria-hidden': 'true', text: '?' }),
+  );
+  explain.addEventListener('click', () => openLevelInfo(level));
+
+  return el('div', { class: 'level-row' }, play, explain);
 }

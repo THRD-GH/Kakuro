@@ -17,13 +17,41 @@ const COLOURS: Record<Level, string> = {
   6: '#17273d',
 };
 
+export interface BeltInfo {
+  name: string;
+  rank: string;
+  descriptor: string;
+  /** What the puzzles ask, in a few words — the third line of a level row. */
+  asks: string;
+}
+
+/**
+ * The belts, as dandoku.com wears them: the same six names and the same six
+ * descriptors across the collection, so a brown belt at killer means
+ * something at kakuro too. What each one *asks* is Kakuro's own, off its
+ * technique ladder — short phrases in killer's manner rather than sentences,
+ * because they sit on the third line of a row in small type.
+ *
+ * The first two come down to the same technique, and so do the last two:
+ * what separates them is how much of the grid holds out, which is what their
+ * phrases say, rather than promising a technique that never arrives.
+ */
+export const BELTS: Record<Level, BeltInfo> = {
+  1: { name: 'White belt', rank: '5th Kyū', descriptor: 'Foundations', asks: 'clues written only one way' },
+  2: { name: 'Yellow belt', rank: '4th Kyū', descriptor: 'Developing', asks: 'the same, over more of the grid' },
+  3: { name: 'Green belt', rank: '3rd Kyū', descriptor: 'Confident', asks: 'a digit with one home left' },
+  4: { name: 'Blue belt', rank: '2nd Kyū', descriptor: 'Advanced', asks: 'sums that will not write in' },
+  5: { name: 'Brown belt', rank: '1st Kyū', descriptor: 'Expert', asks: 'combinations dealt cell by cell' },
+  6: { name: 'Black belt', rank: '1st Dan', descriptor: 'Dan challenge', asks: 'dealing, sustained' },
+};
+
 /**
  * The belt, drawn as the other DanDoku games draw it: a flat band with two
  * lines of stitching, the knot square on it with a fold across, and the two
  * tails hanging below. Same paths, same viewBox, same stroke classes as
  * killer-sudoku's, so a belt looks the same whichever game it is met in.
  *
- * It replaces a coloured rectangle, which read as a swatch rather than as a
+ * It replaced a coloured rectangle, which read as a swatch rather than as a
  * belt, and which had nothing to keep the white one off the white panel it
  * sat on. The outline here is the theme's strong line, and that is what keeps
  * both ends of the ladder visible — white against the day stock, black

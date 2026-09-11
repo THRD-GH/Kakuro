@@ -11,6 +11,8 @@ export interface AppContext {
   size: Size;
   setSize(size: Size): void;
   applyTheme(): void;
+  /** Put the chosen background behind every screen, after the setting changes. */
+  applyBackground(): void;
   /** Take or drop the screen wake lock, after the setting changes. */
   applyWakeLock(): void;
   /** Repaint the board in place, after a highlighting setting changes. */

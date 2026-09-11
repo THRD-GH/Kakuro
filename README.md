@@ -213,6 +213,38 @@ ochre, the settled green and the red for a mistake were already the family's
 values — so only the ink changed: the clue squares are the navy of the text
 beside them.
 
+**Backgrounds**, from the same six drawn patterns the other games offer —
+Seigaiha, Shippō, Tatami, Washi, Sumi and Obi, built as SVG at load so nothing
+is downloaded — or a photo of your own, shrunk to 1600px and kept on the
+device. A Dim slider lays the page colour over the picture to taste. On a
+wide screen each screen stands on the picture as a framed mat; on a phone the
+mat would hide the picture entirely, so every piece stands on it as a tile of
+its own instead. Kakuro has more loose print on its menu than the other games
+— a hero, the board picker, section labels, the line at the foot — and each
+gets a tile or a tab, so nothing readable ever sits on the image. The board's
+rules are translucent ink drawn through the gaps between cells, so behind a
+picture they sit on the page colour rather than showing the picture through.
+
+The play screen is sized to the window, unlike killer's, so the mat is drawn
+inside that height rather than added to it: a mat added to it pushed a board
+sized to the exact screen off the bottom, which is how Sudoku Variants found
+it had to do the same.
+
+**Settings split in two**, as killer's did: Game for how the puzzle behaves
+and how you write into it, Display for how it looks and what the device does.
+The switches are the house switch — a square track framed in ink, a square
+knob that slides across and inks the whole thing in when on — and a choice
+such as the theme is a row of buttons with one lit. The one place Kakuro keeps
+its own way is that each switch is still a real button with a switch role,
+which a keyboard and a screen reader can work.
+
+**Each belt has a `?`**, which says what it asks before you commit to one: the
+technique it introduces, named and explained in the solver's own words, so the
+panel, a hint and the win screen all call a step by the same name. Kakuro's
+level row is a single button that starts a puzzle, and a button cannot sit
+inside a button, so the `?` has a cell of its own at the end of the row rather
+than inside the belt's lines as killer draws it.
+
 ## Boards and levels
 
 Two separate choices. **Size** is how long you want to be here; **level** is how

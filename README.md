@@ -67,6 +67,13 @@ Hint and pause; along the bottom, undo, redo and a rub-out key for Clear. Four
 colours still say which group a key belongs to before you look at the drawing,
 and each tool's title says whether it wants holding.
 
+**Keypad side**, under Display, puts the digits on the right under a right
+thumb, with the tools across from them, as killer-sudoku offers it; left is
+where they have always been. Only the two blocks swap: 1 to 9 keeps its order
+and the tools keep their rows. **Undo needs a hold**, under Game, guards Undo
+and Redo together, as killer-sudoku does — a stray Redo unpicks a move as
+surely as a stray Undo — and like Clear and Marks it leaves `Z` and `Y` alone.
+
 It came to that the long way round. Two matching blocks of *words* came first,
 and the words had to shrink to twelve pixels to fit a key that size. The sudoku
 family's arrangement replaced it — a pad, six labelled buttons two abreast

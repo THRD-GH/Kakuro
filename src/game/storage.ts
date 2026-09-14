@@ -34,8 +34,13 @@ export const POOL_SIZES = [500, 1000, 2500, 5000] as const;
 
 export type Theme = 'night' | 'day' | 'contrast';
 
+/** Which side of the controls the digits sit on, as killer-sudoku names it. */
+export type KeypadSide = 'left' | 'right';
+
 export interface Settings {
   theme: Theme;
+  /** Which side the digits sit on, with the tools across from them. */
+  keypadSide: KeypadSide;
   /** The board last chosen on the menu, so it is still there next time. */
   size: Size;
   /** How many numbered grids each board and belt offers: one of POOL_SIZES. */
@@ -65,6 +70,8 @@ export interface Settings {
   hintNeedsHold: boolean;
   marksNeedsHold: boolean;
   clearNeedsHold: boolean;
+  /** Undo and Redo, together: a stray tap should not unpick a move you meant. */
+  undoNeedsHold: boolean;
   /** What sits behind the screens: 'none', a pattern's id, or 'custom' for a photo. */
   background: string;
   /** How far the page colour is laid over that image, 0 (none) to 1 (hidden). */
@@ -73,6 +80,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'day',
+  keypadSide: 'left',
   size: 12,
   poolSize: POOL_SIZE,
   highlightRuns: true,
@@ -88,6 +96,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hintNeedsHold: false,
   marksNeedsHold: true,
   clearNeedsHold: true,
+  undoNeedsHold: false,
   background: 'none',
   backgroundDim: 0.55,
 };
@@ -149,6 +158,7 @@ export function loadSettings(): Settings {
   // Only the sizes on offer: an edited store could otherwise make the menu
   // count to a million, or to nothing.
   if (!(POOL_SIZES as readonly number[]).includes(stored.poolSize)) stored.poolSize = DEFAULT_SETTINGS.poolSize;
+  if (stored.keypadSide !== 'left' && stored.keypadSide !== 'right') stored.keypadSide = DEFAULT_SETTINGS.keypadSide;
   return stored;
 }
 

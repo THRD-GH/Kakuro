@@ -1219,6 +1219,17 @@ p {
   gap: 0.3rem;
 }
 
+/*
+ * Keypad side, as killer-sudoku reads it off the root: on the right, the
+ * digits go under a right thumb and the tools cross to the other side. The
+ * digits themselves never mirror — 1 to 9 has one order — and nor does the
+ * tools block, whose rows are laid out by what they do. In landscape and on a
+ * desktop the pair swaps inside the panel beside the board.
+ */
+:root[data-keypad='right'] .controls > .keypad {
+  order: 2;
+}
+
 .key {
   /* A tap target you can hit without looking: 44px is the floor. The ceiling
      matters just as much — every pixel these take is one off the board. */

@@ -1,4 +1,4 @@
-import type { Settings, Theme } from '../game/storage.ts';
+import type { KeypadSide, Settings, Theme } from '../game/storage.ts';
 import { POOL_SIZES, exportBackup, importBackup, saveSettings } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
 import { BACKGROUNDS, customPhoto, forgetPhoto, keepPhoto } from './backgrounds.ts';
@@ -41,6 +41,11 @@ const TOGGLES: Toggle[] = [
     detail: 'Otherwise one stray tap pencils in the whole board. M on a keyboard always fills them.',
   },
   { key: 'clearNeedsHold', title: 'Clear needs a hold', detail: 'Guards the button against a mis-tap. Delete and Backspace always clear.' },
+  {
+    key: 'undoNeedsHold',
+    title: 'Undo needs a hold',
+    detail: 'Undo and Redo both, so a stray tap cannot unpick a move. Z and Y on a keyboard always work.',
+  },
   { key: 'highlightRuns', title: 'Highlight the runs', detail: 'Tints the across and down runs through the cell you are on.' },
   { key: 'highlightSameDigit', title: 'Highlight matching digits', detail: 'Tints other cells holding the same digit.' },
   {
@@ -55,6 +60,11 @@ const TOGGLES: Toggle[] = [
     title: 'Fireworks when solved',
     detail: 'About eight seconds of them above a dojo when the last digit goes in. Never shown when the device asks for reduced motion.',
   },
+];
+
+const KEYPAD_SIDES: { value: KeypadSide; label: string }[] = [
+  { value: 'left', label: 'Left' },
+  { value: 'right', label: 'Right' },
 ];
 
 const THEMES: { value: Theme; label: string }[] = [
@@ -226,6 +236,20 @@ export function openSettings(app: AppContext): void {
     backgroundPicker(app),
   );
 
+  const keypadRow = stacked(
+    'Keypad side',
+    'Right puts the digits under a right thumb, with the tools across from them. In landscape and on a desktop they swap inside the panel beside the board.',
+    picker(
+      KEYPAD_SIDES,
+      () => app.settings.keypadSide,
+      (side) => {
+        app.settings.keypadSide = side;
+        saveSettings(app.settings);
+        app.applyKeypadSide();
+      },
+    ),
+  );
+
   /*
    * The show a solved puzzle gets, played now: for deciding whether to keep
    * the switch above it on, and for seeing it at all without solving one.
@@ -297,11 +321,12 @@ export function openSettings(app: AppContext): void {
 
   const gameRows = [
     poolRow,
-    ...rows(['allowSingleMark', 'autoRemoveMarks', 'instantCheck', 'checkNeedsHold', 'hintNeedsHold', 'marksNeedsHold', 'clearNeedsHold']),
+    ...rows(['allowSingleMark', 'autoRemoveMarks', 'instantCheck', 'checkNeedsHold', 'hintNeedsHold', 'marksNeedsHold', 'clearNeedsHold', 'undoNeedsHold']),
   ];
   const displayRows = [
     themeRow,
     backgroundRow,
+    keypadRow,
     ...rows(['highlightRuns', 'highlightSameDigit', 'showCombos', 'showTimer', 'keepAwake', 'fireworks']),
     fireworksRow,
   ];

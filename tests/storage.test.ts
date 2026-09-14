@@ -179,3 +179,12 @@ test('a pool size that is not on offer falls back to the default', () => {
   saveSettings({ ...DEFAULT_SETTINGS, poolSize: 5000 });
   assert.equal(loadSettings().poolSize, 5000);
 });
+
+test('a keypad side that is not left or right falls back to left', () => {
+  store.clear();
+  saveSettings({ ...DEFAULT_SETTINGS, keypadSide: 'middle' as 'left' });
+  assert.equal(loadSettings().keypadSide, 'left');
+  saveSettings({ ...DEFAULT_SETTINGS, keypadSide: 'right' });
+  assert.equal(loadSettings().keypadSide, 'right');
+  assert.equal(loadSettings().undoNeedsHold, false);
+});

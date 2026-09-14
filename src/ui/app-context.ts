@@ -11,6 +11,8 @@ export interface AppContext {
   size: Size;
   setSize(size: Size): void;
   applyTheme(): void;
+  /** Put the digits on the chosen side, after the setting changes. */
+  applyKeypadSide(): void;
   /** Put the chosen background behind every screen, after the setting changes. */
   applyBackground(): void;
   /** Take or drop the screen wake lock, after the setting changes. */

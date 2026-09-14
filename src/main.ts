@@ -53,6 +53,7 @@ class App implements AppContext {
   constructor(root: HTMLElement) {
     this.root = root;
     this.applyTheme();
+    this.applyKeypadSide();
     this.applyBackground();
     this.guardBackButton();
 
@@ -118,6 +119,7 @@ class App implements AppContext {
     this.settings = loadSettings();
     this.history = loadHistory();
     this.applyTheme();
+    this.applyKeypadSide();
     this.applyBackground();
     this.goMenu();
   }
@@ -245,6 +247,11 @@ class App implements AppContext {
 
   applyBackground(): void {
     applyBackground(this.settings);
+  }
+
+  /** Read off the root by the stylesheet, as killer-sudoku does, so no screen has to be rebuilt. */
+  applyKeypadSide(): void {
+    document.documentElement.dataset.keypad = this.settings.keypadSide;
   }
 
   applyWakeLock(): void {

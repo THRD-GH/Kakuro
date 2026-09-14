@@ -93,7 +93,6 @@ export class PlayScreen {
       title: 'Undo',
     });
     this.undoButton.append(undoIcon());
-    this.undoButton.addEventListener('click', () => this.undo());
     this.redoButton = el('button', {
       class: 'key edit glyph',
       type: 'button',
@@ -101,7 +100,6 @@ export class PlayScreen {
       title: 'Redo',
     });
     this.redoButton.append(redoIcon());
-    this.redoButton.addEventListener('click', () => this.redo());
 
     this.node = el(
       'div',
@@ -321,12 +319,16 @@ export class PlayScreen {
       const name = button.getAttribute('aria-label') ?? 'This key';
       bindTap(button, {
         onHold: action,
-        onTap: () => toast(`${name} needs a long press.`),
+        // Undo and Redo are greyed out with nothing to take back, and a nudge
+        // to hold a key that could do nothing anyway would only be noise.
+        onTap: () => {
+          if (!button.disabled) toast(`${name} needs a long press.`);
+        },
         doubleTap: false,
       });
     };
 
-    const { marksNeedsHold, clearNeedsHold, checkNeedsHold, hintNeedsHold } = this.app.settings;
+    const { marksNeedsHold, clearNeedsHold, checkNeedsHold, hintNeedsHold, undoNeedsHold } = this.app.settings;
 
     /*
      * The slot the Notes button used to hold. Nothing has to switch modes any
@@ -346,6 +348,10 @@ export class PlayScreen {
 
     const hint = tool('aid', 'Hint', hintNeedsHold, hintIcon());
     guard(hint, hintNeedsHold, () => this.hint());
+
+    // One setting for both, as killer-sudoku has it: a stray Redo unpicks a move as surely as a stray Undo.
+    guard(this.undoButton, undoNeedsHold, () => this.undo());
+    guard(this.redoButton, undoNeedsHold, () => this.redo());
 
     this.tableButton = tool('session', 'Table', false, tableIcon());
     this.tableButton.setAttribute('aria-pressed', 'false');

@@ -52,26 +52,19 @@ the guard broke out of the handler after the keystroke had already been
 claimed. Check and Hint keep their `Shift`, because those two are counted
 against the puzzle and cannot be given back.
 
-The block itself is laid out as the sudoku games lay theirs out: the digits
-in a pad of their own, Clear and the undo pair across its foot, and the six
-remaining buttons beside the pad, two abreast and grouped by column — the
-solving aids in one, the session buttons in the other. Four colours say which
-group a key belongs to before its label is read.
+The block is two three-by-threes: the nine digits, and the nine tools beside
+them drawn rather than named — a pencil for Marks, a rub-out key for Clear, a
+tick for Check, a bulb for Hint, a table for the combinations, then undo, zoom,
+pause and redo. Four colours still say which group a key belongs to before you
+look at the drawing, and each tool's title says whether it wants holding.
 
-Two matching three-by-threes came first and was wrong in the hand: it made the
-nine buttons pressed occasionally exactly as large as the nine pressed
-constantly, which cost the digits their size — 59×44, wider than they are
-tall, which no phone keypad is — and left the labels at twelve pixels in a
-fifty-pixel box. Digits are now 48×44 with 13px labels beside them, and Clear,
-the key used most after the digits, has the widest target on the board. The
-editing strip runs under *both* columns rather than under the pad alone,
-because tucked under the pad it gave the left column a fourth row against the
-right column's three, and that made the keys pressed least the tallest things
-on screen.
-
-None of it costs the board anything: on a phone the grid is limited by the
-width of the screen long before its height, so the block grew by 51px into
-space that was already slack.
+It came to that the long way round. Two matching blocks of *words* came first,
+and the words had to shrink to twelve pixels to fit a key that size. The sudoku
+family's arrangement replaced it — a pad, six labelled buttons two abreast
+beside it and a Clear bar across the foot — which read well and ran to four
+rows: 193px, nearly a third of a phone. On a phone a kakuro board is limited by
+height, so every one of those pixels came off the board. Drawn, a tool needs no
+more room than a digit, and three rows are 142px.
 
 **Beside the board**, on anything wider than a phone, the controls and the
 table share a column of their own. The table used to stay an overlay there
@@ -86,10 +79,9 @@ the width capped the board — 556px of grid with 368px of height going spare,
 and a 20×20 cell down at 28px for no reason. Uncapped it is 744px and 36px.
 The menus stay where they were.
 
-Undo, redo, zoom and pause are drawn rather than typed. As text glyphs they
-were a gamble on the font — `↶` and `↷` are missing from several UI faces and
-arrive as a box, or at a different weight and baseline from the labels beside
-them, so a row that should read as one set came out ragged.
+The drawings are SVG rather than text glyphs. As characters, `↶` and `↷` were a
+gamble on the font — missing from several UI faces, or arriving at a different
+weight and baseline from their neighbours.
 
 A mode is the wrong shape for this. It was invisible at the moment it counted:
 you found out which one you were in from what came up in the cell, and by then

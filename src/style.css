@@ -1178,62 +1178,15 @@ p {
 .controls {
   flex: 0 0 auto;
   display: grid;
-  /*
-   * The digits want to be square, which fixes their column. Everything else
-   * takes what is left — which is what lets a label sit at a readable size
-   * instead of at twelve pixels in a fifty-pixel box.
-   */
-  grid-template-columns: 1fr 1.25fr;
+  /* Two matching blocks: nine digits, and nine tools drawn to the same size. */
+  grid-template-columns: 1fr 1fr;
   gap: 0.45rem;
 }
 
-.keypad {
+.keypad,
+.tools {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.3rem;
-}
-
-/*
- * The editing keys run under both columns rather than under the digits
- * alone. Tucked under the pad they gave the left column a fourth row against
- * the right column's three, and grid being grid, that made the keys pressed
- * least the tallest things on the screen: 85x60 against a 53x44 digit.
- * Across the foot, every key in the block is one row high.
- */
-.under-keys {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 0.3rem;
-  min-width: 0;
-}
-
-/* Clear is the key used most after the digits, so it takes two thirds. */
-.under-keys > .key {
-  flex: 2 1 0;
-  min-width: 0;
-}
-
-.under-keys > .undo-pair {
-  flex: 1 1 0;
-}
-
-.undo-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.3rem;
-  min-width: 0;
-}
-
-/*
- * Beside the digits, filling the same height: the solving aids down one
- * column and the session buttons down the other. Column flow is what makes
- * that a grouping rather than three unrelated pairs.
- */
-.actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: repeat(3, 1fr);
-  grid-auto-flow: column;
   gap: 0.3rem;
 }
 
@@ -1281,25 +1234,15 @@ p {
   font-size: 0.84rem;
 }
 
-.key.wide {
-  letter-spacing: 0.04em;
-}
 
-/* Undo, redo, zoom and pause carry a drawing rather than a word: they are the
-   four recognised faster as a shape, and it buys the labels beside them room
-   to stay readable. */
-.key.glyph svg {
-  width: 1.15rem;
-  height: 1.15rem;
+/* Every tool is a drawing, sized to read at a glance in a key the size of a
+   digit. */
+.key svg {
+  width: 1.3rem;
+  height: 1.3rem;
   display: block;
 }
 
-/*
- * A disabled key dims what it says, not what it is. Faded as a whole it went
- * see-through, and with a picture behind the page the pattern showed through
- * the key face: undo and redo at the start of a game read as two holes in the
- * keypad.
- */
 .key:disabled {
   opacity: 1;
   color: var(--dim);

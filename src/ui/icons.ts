@@ -1,7 +1,9 @@
 /**
- * The four controls that carry a shape rather than a word.
+ * The tools carry a shape rather than a word — all nine beside the digits,
+ * since a word in a key the size of a digit either shrinks to twelve pixels
+ * or takes room the board wants.
  *
- * They were text glyphs — `↶ ↷ ⤢ ⏸` — which is a gamble on the font: the
+ * The first four were text glyphs — `↶ ↷ ⤢ ⏸` — which is a gamble on the font: the
  * arrows are missing from several UI faces and arrive as a box or as a
  * different weight and baseline from the labels beside them, so a row of
  * buttons that should read as one set came out ragged. Drawn here they are
@@ -62,3 +64,33 @@ export const pauseIcon = (): SVGSVGElement =>
 
 export const playIcon = (): SVGSVGElement =>
   icon(['path', { d: 'M5.4 3.6 12.4 8l-7 4.4z', fill: 'currentColor' }]);
+
+/** A pencil: pencil in what is possible in every cell. */
+export const marksIcon = (): SVGSVGElement =>
+  icon(['path', { ...line, d: 'M11 2.6a1.7 1.7 0 1 1 2.4 2.4L5.3 13.1 2 14l.9-3.3L11 2.6z' }]);
+
+/** A rub-out key with a cross in it: empty the cell. */
+export const eraseIcon = (): SVGSVGElement =>
+  icon(
+    ['path', { ...line, d: 'M13.8 3.3H5.8L1.4 8.2l4.4 5h8a1.2 1.2 0 0 0 1.2-1.2V4.5a1.2 1.2 0 0 0-1.2-1.2z' }],
+    ['line', { ...line, x1: '11.9', y1: '6.4', x2: '8.3', y2: '10' }],
+    ['line', { ...line, x1: '8.3', y1: '6.4', x2: '11.9', y2: '10' }],
+  );
+
+/** A tick: check the grid against the answer. */
+export const checkIcon = (): SVGSVGElement =>
+  icon(['polyline', { ...line, points: '3 8.6 6.5 12 13 4.5' }]);
+
+/** A bulb rather than a question mark: every belt already has a ? that means explain. */
+export const hintIcon = (): SVGSVGElement =>
+  icon(
+    ['path', { ...line, d: 'M5.9 11c0-1.2-2.4-2.3-2.4-4.9a4.5 4.5 0 0 1 9 0c0 2.6-2.4 3.7-2.4 4.9z' }],
+    ['path', { ...line, d: 'M6.2 13h3.6M6.9 14.9h2.2' }],
+  );
+
+/** A table with a heading row: the combinations. */
+export const tableIcon = (): SVGSVGElement =>
+  icon(
+    ['rect', { ...line, x: '2.2', y: '2.8', width: '11.6', height: '10.4', rx: '1' }],
+    ['path', { ...line, d: 'M2.2 6.3h11.6M2.2 9.8h11.6M6.3 6.3v6.9' }],
+  );

@@ -6,7 +6,7 @@ import { Game } from '../game/state.ts';
 import type { SavedGame } from '../game/storage.ts';
 import { dropSave, puzzleLink, putSave, recordFinish, recordStart, saveSettings } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
-import { pauseIcon, playIcon, redoIcon, undoIcon, zoomIcon } from './icons.ts';
+import { checkIcon, eraseIcon, hintIcon, marksIcon, pauseIcon, playIcon, redoIcon, tableIcon, undoIcon, zoomIcon } from './icons.ts';
 import { Board } from './board.ts';
 import { CombosBar, fillCandidates } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
@@ -77,9 +77,10 @@ export class PlayScreen {
     this.marksButton = el('button', {
       class: 'key aid',
       type: 'button',
-      title: 'Pencil in every candidate the clues still allow',
-      text: 'Marks',
+      'aria-label': 'Marks',
+      title: 'Marks: pencil in what is possible in every cell',
     });
+    this.marksButton.append(marksIcon());
     this.marksButton.addEventListener('click', () => this.fillMarks());
 
     this.undoButton = el('button', {
@@ -248,19 +249,16 @@ export class PlayScreen {
   }
 
   /*
-   * The control block, laid out the way the sudoku games lay theirs out.
+   * Two three-by-threes: the nine digits, and the nine tools beside them,
+   * drawn rather than named.
    *
-   * Two matching three-by-threes was tidy on paper and wrong in the hand: it
-   * made nine buttons that are pressed occasionally exactly as large as nine
-   * that are pressed constantly, which cost the digits their size and left
-   * the labels at twelve pixels in a fifty-pixel box.
-   *
-   * So the digits keep a block of their own, Clear and the undo pair run
-   * across the foot of it — Clear is the most-used key after the digits and
-   * now has the widest target on the board — and what is left goes beside the
-   * pad, two abreast, grouped by column: the solving aids in one, the session
-   * buttons in the other. Four colours say which group a key is in before the
-   * label is read.
+   * The sudoku family's arrangement — a pad, six labelled buttons two abreast
+   * beside it and a Clear bar across the foot of both — read well and ran to
+   * four rows: 193px, nearly a third of a phone. On a phone a kakuro board is
+   * limited by height, so all of it came off the board. Three rows are 142px.
+   * Two matching blocks were tried once before and read badly, because their
+   * words had to shrink to twelve pixels to fit; drawn, a tool needs no more
+   * room than a digit. The four colours still say which group a key is in.
    */
   private controls(): HTMLElement {
     const pad = el('div', { class: 'keypad' });
@@ -278,24 +276,36 @@ export class PlayScreen {
       pad.append(key);
     }
 
-    const erase = el('button', { class: 'key edit wide', type: 'button', text: 'Clear' });
+    /*
+     * A drawn tool still says what it is — to a screen reader through its
+     * label, and to a pointer through its title, which also says when the key
+     * wants holding rather than tapping, since nothing on the drawing can.
+     */
+    const tool = (group: string, name: string, needsHold: boolean, drawing: SVGSVGElement): HTMLButtonElement => {
+      const button = el('button', {
+        class: `key ${group}`,
+        type: 'button',
+        'aria-label': name,
+        title: needsHold ? `${name} (hold)` : name,
+      });
+      button.append(drawing);
+      return button;
+    };
+
+    const erase = tool('edit', 'Clear', this.app.settings.clearNeedsHold, eraseIcon());
     if (this.app.settings.clearNeedsHold) bindTap(erase, { onHold: () => this.eraseCell() });
     else bindTap(erase, { onTap: () => this.eraseCell() });
 
-    const check = el('button', { class: 'key aid', type: 'button', text: 'Check' });
+    const check = tool('aid', 'Check', this.app.settings.checkNeedsHold, checkIcon());
     if (this.app.settings.checkNeedsHold) bindTap(check, { onHold: () => this.check() });
     else bindTap(check, { onTap: () => this.check() });
 
-    const hint = el('button', { class: 'key aid', type: 'button', text: 'Hint' });
+    const hint = tool('aid', 'Hint', this.app.settings.hintNeedsHold, hintIcon());
     if (this.app.settings.hintNeedsHold) bindTap(hint, { onHold: () => this.hint() });
     else bindTap(hint, { onTap: () => this.hint() });
 
-    this.tableButton = el('button', {
-      class: 'key session',
-      type: 'button',
-      'aria-pressed': 'false',
-      text: 'Table',
-    });
+    this.tableButton = tool('session', 'Table', false, tableIcon());
+    this.tableButton.setAttribute('aria-pressed', 'false');
     this.tableButton.addEventListener('click', () => {
       this.app.settings.showCombos = !this.app.settings.showCombos;
       saveSettings(this.app.settings);
@@ -326,14 +336,23 @@ export class PlayScreen {
       'div',
       { class: 'controls' },
       pad,
-      // Column order: the grid flows down each column, so these are the aids
-      // and then the session keys, not three rows of two.
-      el('div', { class: 'actions' }, this.marksButton, check, hint, this.tableButton, this.zoomButton, this.pauseButton),
+      /*
+       * Row by row: fill, rub out and check along the top; hint, the table and
+       * undo; zoom, pause and redo — undo and redo stacked at the outside edge,
+       * under the thumb that reaches for them most.
+       */
       el(
         'div',
-        { class: 'under-keys' },
+        { class: 'tools' },
+        this.marksButton,
         erase,
-        el('div', { class: 'undo-pair' }, this.undoButton, this.redoButton),
+        check,
+        hint,
+        this.tableButton,
+        this.undoButton,
+        this.zoomButton,
+        this.pauseButton,
+        this.redoButton,
       ),
     );
   }

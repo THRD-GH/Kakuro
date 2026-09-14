@@ -306,10 +306,21 @@ export class PlayScreen {
      * double-tap either, though bindTap counts one as a hold. Digits are
      * double-tapped all the time now that it forces an answer, and a double-tap
      * that lands on a tool instead is exactly the accident a guard is for.
+     *
+     * A tap still gets an answer: a toast saying the key wants a long press.
+     * Ignored in silence, a guarded key looked as if it was broken.
      */
     const guard = (button: HTMLButtonElement, needsHold: boolean, action: () => void): void => {
-      if (needsHold) bindTap(button, { onHold: action, doubleTap: false });
-      else bindTap(button, { onTap: action });
+      if (!needsHold) {
+        bindTap(button, { onTap: action });
+        return;
+      }
+      const name = button.getAttribute('aria-label') ?? 'This key';
+      bindTap(button, {
+        onHold: action,
+        onTap: () => toast(`${name} needs a long press.`),
+        doubleTap: false,
+      });
     };
 
     const { marksNeedsHold, clearNeedsHold, checkNeedsHold, hintNeedsHold } = this.app.settings;
@@ -599,12 +610,18 @@ export class PlayScreen {
         break;
       case 'h':
       case 'H':
-        if (this.app.settings.hintNeedsHold && !e.shiftKey) break;
+        if (this.app.settings.hintNeedsHold && !e.shiftKey) {
+          toast('Hint needs Shift+H.');
+          break;
+        }
         this.hint();
         break;
       case 'c':
       case 'C':
-        if (this.app.settings.checkNeedsHold && !e.shiftKey) break;
+        if (this.app.settings.checkNeedsHold && !e.shiftKey) {
+          toast('Check needs Shift+C.');
+          break;
+        }
         this.check();
         break;
       default:

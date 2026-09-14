@@ -55,7 +55,10 @@ because those two are counted against the puzzle and cannot be given back.
 A guarded button goes off on a hold and nothing else. A quick double-tap counts
 as a hold on a digit, where it forces the answer, but not on a guard: digits
 get double-tapped all the time, and a double-tap that lands on a tool instead
-is the very accident the guard is there for.
+is the very accident the guard is there for. A tap is not ignored in silence,
+though, which made a guarded button look broken: it brings up a toast saying
+the button needs a long press. When Check or Hint is guarded, `C` or `H`
+without `Shift` says what it needs in the same way.
 
 The block is two three-by-threes: the nine digits, and the nine tools beside
 them drawn rather than named. Along the top, a table for the combinations, a

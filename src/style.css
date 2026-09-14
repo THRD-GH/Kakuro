@@ -645,6 +645,10 @@ p {
   min-height: 0;
   min-width: 0;
   display: grid;
+  /* What a zoomed board measures its cells against: see .board-wrap.zoomed.
+     Its size never came from its contents — the pane inside is size-contained
+     already, and the table over it is positioned — so nothing else moves. */
+  container-type: size;
 }
 
 .board-wrap {
@@ -735,12 +739,28 @@ p {
   user-select: none;
 }
 
-.board-wrap.zoomed .cell {
-  --cell-size: 2.3rem;
+/*
+ * Zoomed, a cell is the size a thumb can hit or half as big again as it was,
+ * whichever is bigger, so zooming in never makes the board smaller. The floor
+ * on its own did exactly that wherever fitted cells were already bigger than
+ * it — most boards on a desktop, where a Small board's cells are sixty pixels
+ * — and once the key's arrows said which way the next press goes, they said in
+ * while the board went out.
+ *
+ * "As it was" is measured off the board area, not the pane. The pane is the
+ * part that scrolls: zoomed, its box gives up the bar's reserved height, and on
+ * a desktop the width of the scrollbars the bigger board brings, so a board
+ * measured against it would change size with the table and could argue with
+ * its own scrollbars. The area is the same size zoomed or not. Neither the
+ * pane nor the board is a container while zoomed, so the cells measure the
+ * area as well.
+ */
+.board-wrap.zoomed .cell,
+.board-wrap.zoomed .board {
+  --cell-size: max(2.3rem, min(100cqw, 100cqh) / var(--n) * 1.5);
 }
 
 .board-wrap.zoomed .board {
-  --cell-size: 2.3rem;
   container-type: normal;
   width: calc(var(--n) * var(--cell-size));
   height: calc(var(--n) * var(--cell-size));

@@ -96,8 +96,6 @@ rest of both runs — a tap is far too easy to make by accident to let it change
 anything outside its own cell.
 
 **Zoom** trades fitting the board on screen for cells you can actually hit.
-Its arrows show what the next press does: pointing apart to zoom in, turned
-inward once zoomed, to come back out.
 Fitted to a phone, a 20×20 gives each cell about fifteen pixels: the answers
 survive that but a two-figure clue in half of one does not, and it is well
 under the size a thumb can hit. Large and Huge boards therefore open zoomed on
@@ -106,6 +104,12 @@ A finger pans it natively; a mouse drags it, since the alternative was the
 scrollbar and the combination bar floats over exactly where that lives. The
 bar also reserves its own height under the board, so the bottom row can always
 be scrolled clear of it.
+
+The key's arrows show what the next press does: pointing apart to zoom in,
+turned inward once zoomed, to come back out. Zooming in never makes the board
+smaller — zoomed, a cell is the size a thumb can hit or half as big again as it
+was, whichever is bigger. The floor on its own shrank any board whose cells were
+already bigger than it, which on a desktop is most of them.
 
 **The table** is a strip over the foot of the board showing what can still go
 in the cell you are on, both clues through it at once. A combination reads as

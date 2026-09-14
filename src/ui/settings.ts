@@ -2,6 +2,7 @@ import type { Settings, Theme } from '../game/storage.ts';
 import { saveSettings } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
 import { BACKGROUNDS, customPhoto, forgetPhoto, keepPhoto } from './backgrounds.ts';
+import { previewFireworks } from './celebration.ts';
 import { clear, el } from './dom.ts';
 import { openOverlay, toast } from './overlay.ts';
 
@@ -226,6 +227,18 @@ export function openSettings(app: AppContext): void {
   );
 
   /*
+   * The show a solved puzzle gets, played now: for deciding whether to keep
+   * the switch above it on, and for seeing it at all without solving one.
+   */
+  const preview = el('button', { type: 'button', text: 'Show me' });
+  preview.addEventListener('click', () => previewFireworks());
+  const fireworksRow = stacked(
+    'See the fireworks',
+    'The show a solved puzzle gets, without solving one. From the menu or a puzzle, F on a keyboard does the same.',
+    el('div', { class: 'tabs' }, preview),
+  );
+
+  /*
    * The house switch: a square track framed in ink, a square knob that slides
    * across, the whole thing inked in when on. Still a real button with a
    * switch role, so a keyboard and a screen reader can work it — killer draws
@@ -268,6 +281,7 @@ export function openSettings(app: AppContext): void {
     themeRow,
     backgroundRow,
     ...rows(['highlightRuns', 'highlightSameDigit', 'showCombos', 'showTimer', 'keepAwake', 'fireworks']),
+    fireworksRow,
   ];
 
   let section: 'game' | 'display' = 'game';

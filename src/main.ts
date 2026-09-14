@@ -22,6 +22,7 @@ import { clear, el } from './ui/dom.ts';
 import { openHelp } from './ui/help.ts';
 import { buildMenu } from './ui/menu.ts';
 import { closeAllOverlays, closeTopOverlay, onOverlayClose, onOverlayOpen, overlaysOpen, toast } from './ui/overlay.ts';
+import { previewFireworks } from './ui/celebration.ts';
 import { PlayScreen } from './ui/play.ts';
 import { openSettings } from './ui/settings.ts';
 import { applyBackground } from './ui/backgrounds.ts';
@@ -66,6 +67,12 @@ class App implements AppContext {
           closeTopOverlay();
           e.preventDefault();
         }
+        return;
+      }
+      // F puts on the solve's fireworks, to see them without solving a puzzle.
+      if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat) {
+        e.preventDefault();
+        previewFireworks();
         return;
       }
       this.play?.handleKey(e);

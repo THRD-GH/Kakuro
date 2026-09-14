@@ -30,7 +30,7 @@ export function openHelp(): void {
       'Hold a digit, or double-tap it, to say straight out that it is the answer. Only that strikes the digit off the marks in the rest of both runs; a plain tap never changes anything outside its own cell.',
       'Hold Marks to pencil in what is possible in every cell at once — the digits not already in one of its runs that could still make that run add up. Narrowing them down from there is the puzzle, so it stops at what the rules allow. Long-click Clear empties the cell.',
       'The tools beside the digits are drawn. Along the top: a table for the combinations, a pencil for Marks and a tick for Check. Through the middle: zoom, a bulb for Hint, and pause. Along the bottom: undo, redo and the rub-out key for Clear.',
-      'Keyboard: arrows move, 1–9 toggle, Shift and a digit, or a quick double press of it, forces, Delete or Backspace clears, M fills the marks, Z undoes, Y redoes. When Check or Hint is set to need a hold, the keyboard uses Shift with C or H — Clear and Marks are never guarded on a keyboard, where a key press is deliberate and either one undoes anyway.',
+      'Keyboard: arrows move, 1–9 toggle, Shift and a digit, or a quick double press of it, forces, Delete or Backspace clears, M fills the marks, Z undoes, Y redoes, F puts on the fireworks. When Check or Hint is set to need a hold, the keyboard uses Shift with C or H — Clear and Marks are never guarded on a keyboard, where a key press is deliberate and either one undoes anyway.',
     ]),
     section('The table', [
       'The strip under the board lists every combination that still fits the two clues through the cell you are on — with the digits already written in taken out of both the total and the alphabet.',

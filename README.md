@@ -40,7 +40,7 @@ why there is no Notes mode.
 | Long-click Marks | Pencil in what is possible in every cell — no further |
 
 Keyboard: arrows move, `1`–`9` toggle, `Shift`+digit or a quick double press forces, `Delete` or
-`Backspace` clears, `M` fills the marks, `Z` undoes, `Y` redoes. When Check or
+`Backspace` clears, `M` fills the marks, `Z` undoes, `Y` redoes, `F` puts on the fireworks. When Check or
 Hint is set to need a hold, the matching keys are `Shift+C` and `Shift+H`.
 
 Clear and Marks have no keyboard guard, whatever their buttons are set to. The
@@ -214,6 +214,13 @@ the device asks for reduced motion: the stylesheet stills CSS animation for
 that, but a canvas is drawn by script and has to check for itself. Reopening a
 puzzle that was already finished shows the panel without it, and leaving for
 the next puzzle stops a show that is still going.
+
+To see it without solving anything, Settings > Display has a row under the
+switch that plays the show on a panel of its own, standing in for the Solved
+panel so the layout is the one a solve gets, with Again to run it once more.
+`F` on a keyboard does the same from the menu or a puzzle. It plays whether or
+not the switch is on, since seeing it is how to decide; on a device that asks
+for reduced motion the panel says why there is nothing to see.
 
 `src/ui/fireworks.ts` is written to be lifted into the other DanDoku games as it
 is: no imports, no stylesheet, the dojo's ink and paper from the house tokens

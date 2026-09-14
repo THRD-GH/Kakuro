@@ -37,7 +37,6 @@ export class PlayScreen {
 
   private clock: HTMLElement;
   private claim!: HTMLElement;
-  private marksButton: HTMLButtonElement;
   private undoButton: HTMLButtonElement;
   private redoButton: HTMLButtonElement;
   private hintNote: HTMLElement;
@@ -83,21 +82,6 @@ export class PlayScreen {
     });
 
     this.hintNote = el('div', { class: 'hint-note', 'aria-live': 'polite' });
-
-    /*
-     * The slot the Notes button used to hold. Nothing has to switch modes any
-     * more, so it went to the one writing job the keypad could not do: filling
-     * every cell's marks with what the clues still allow, which is where a lot
-     * of players start a hard grid.
-     */
-    this.marksButton = el('button', {
-      class: 'key aid',
-      type: 'button',
-      'aria-label': 'Marks',
-      title: 'Marks: pencil in what is possible in every cell',
-    });
-    this.marksButton.append(marksIcon());
-    this.marksButton.addEventListener('click', () => this.fillMarks());
 
     this.undoButton = el('button', {
       class: 'key edit glyph',
@@ -299,28 +283,55 @@ export class PlayScreen {
      * label, and to a pointer through its title, which also says when the key
      * wants holding rather than tapping, since nothing on the drawing can.
      */
-    const tool = (group: string, name: string, needsHold: boolean, drawing: SVGSVGElement): HTMLButtonElement => {
+    const tool = (
+      group: string,
+      name: string,
+      needsHold: boolean,
+      drawing: SVGSVGElement,
+      what?: string,
+    ): HTMLButtonElement => {
+      const label = needsHold ? `${name} (hold)` : name;
       const button = el('button', {
         class: `key ${group}`,
         type: 'button',
         'aria-label': name,
-        title: needsHold ? `${name} (hold)` : name,
+        title: what ? `${label}: ${what}` : label,
       });
       button.append(drawing);
       return button;
     };
 
-    const erase = tool('edit', 'Clear', this.app.settings.clearNeedsHold, eraseIcon());
-    if (this.app.settings.clearNeedsHold) bindTap(erase, { onHold: () => this.eraseCell() });
-    else bindTap(erase, { onTap: () => this.eraseCell() });
+    /*
+     * A guarded tool goes off on a hold and on nothing else — not on a
+     * double-tap either, though bindTap counts one as a hold. Digits are
+     * double-tapped all the time now that it forces an answer, and a double-tap
+     * that lands on a tool instead is exactly the accident a guard is for.
+     */
+    const guard = (button: HTMLButtonElement, needsHold: boolean, action: () => void): void => {
+      if (needsHold) bindTap(button, { onHold: action, doubleTap: false });
+      else bindTap(button, { onTap: action });
+    };
 
-    const check = tool('aid', 'Check', this.app.settings.checkNeedsHold, checkIcon());
-    if (this.app.settings.checkNeedsHold) bindTap(check, { onHold: () => this.check() });
-    else bindTap(check, { onTap: () => this.check() });
+    const { marksNeedsHold, clearNeedsHold, checkNeedsHold, hintNeedsHold } = this.app.settings;
 
-    const hint = tool('aid', 'Hint', this.app.settings.hintNeedsHold, hintIcon());
-    if (this.app.settings.hintNeedsHold) bindTap(hint, { onHold: () => this.hint() });
-    else bindTap(hint, { onTap: () => this.hint() });
+    /*
+     * The slot the Notes button used to hold. Nothing has to switch modes any
+     * more, so it went to the one writing job the keypad could not do: filling
+     * every cell's marks with what the clues still allow, which is where a lot
+     * of players start a hard grid. It wants a hold by default, because a stray
+     * tap on it pencilled marks into the whole board.
+     */
+    const marks = tool('aid', 'Marks', marksNeedsHold, marksIcon(), 'pencil in what is possible in every cell');
+    guard(marks, marksNeedsHold, () => this.fillMarks());
+
+    const erase = tool('edit', 'Clear', clearNeedsHold, eraseIcon());
+    guard(erase, clearNeedsHold, () => this.eraseCell());
+
+    const check = tool('aid', 'Check', checkNeedsHold, checkIcon());
+    guard(check, checkNeedsHold, () => this.check());
+
+    const hint = tool('aid', 'Hint', hintNeedsHold, hintIcon());
+    guard(hint, hintNeedsHold, () => this.hint());
 
     this.tableButton = tool('session', 'Table', false, tableIcon());
     this.tableButton.setAttribute('aria-pressed', 'false');
@@ -355,22 +366,22 @@ export class PlayScreen {
       { class: 'controls' },
       pad,
       /*
-       * Row by row: fill, rub out and check along the top; hint, the table and
-       * undo; zoom, pause and redo — undo and redo stacked at the outside edge,
-       * under the thumb that reaches for them most.
+       * Row by row: the table, Marks and Check along the top; zoom, Hint and
+       * pause through the middle; undo, redo and Clear along the bottom — the
+       * three edit keys together at the foot of the block.
        */
       el(
         'div',
         { class: 'tools' },
-        this.marksButton,
-        erase,
-        check,
-        hint,
         this.tableButton,
-        this.undoButton,
+        marks,
+        check,
         this.zoomButton,
+        hint,
         this.pauseButton,
+        this.undoButton,
         this.redoButton,
+        erase,
       ),
     );
   }

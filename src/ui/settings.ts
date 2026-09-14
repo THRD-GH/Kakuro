@@ -34,6 +34,11 @@ const TOGGLES: Toggle[] = [
   },
   { key: 'checkNeedsHold', title: 'Check needs a hold', detail: 'Check is counted against the puzzle. Keyboard: Shift+C.' },
   { key: 'hintNeedsHold', title: 'Hint needs a hold', detail: 'So is a hint. Keyboard: Shift+H.' },
+  {
+    key: 'marksNeedsHold',
+    title: 'Marks needs a hold',
+    detail: 'Otherwise one stray tap pencils in the whole board. M on a keyboard always fills them.',
+  },
   { key: 'clearNeedsHold', title: 'Clear needs a hold', detail: 'Guards the button against a mis-tap. Delete and Backspace always clear.' },
   { key: 'highlightRuns', title: 'Highlight the runs', detail: 'Tints the across and down runs through the cell you are on.' },
   { key: 'highlightSameDigit', title: 'Highlight matching digits', detail: 'Tints other cells holding the same digit.' },
@@ -253,7 +258,7 @@ export function openSettings(app: AppContext): void {
       return toggleRow(toggle);
     });
 
-  const gameRows = rows(['allowSingleMark', 'autoRemoveMarks', 'instantCheck', 'checkNeedsHold', 'hintNeedsHold', 'clearNeedsHold']);
+  const gameRows = rows(['allowSingleMark', 'autoRemoveMarks', 'instantCheck', 'checkNeedsHold', 'hintNeedsHold', 'marksNeedsHold', 'clearNeedsHold']);
   const displayRows = [
     themeRow,
     backgroundRow,

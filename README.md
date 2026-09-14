@@ -37,26 +37,32 @@ why there is no Notes mode.
 | Tap a keypad digit | Toggle that digit in the cell |
 | Long-click / double-click a digit | Force it in as the answer, tidying the marks in both its runs |
 | Long-click Clear | Empty the cell |
-| Marks | Pencil in what is possible in every cell — no further |
+| Long-click Marks | Pencil in what is possible in every cell — no further |
 
 Keyboard: arrows move, `1`–`9` toggle, `Shift`+digit or a quick double press forces, `Delete` or
 `Backspace` clears, `M` fills the marks, `Z` undoes, `Y` redoes. When Check or
 Hint is set to need a hold, the matching keys are `Shift+C` and `Shift+H`.
 
-Clear has no keyboard guard, whatever the button is set to. The guard is there
-because a 44px button is easy to catch with a thumb on the way to something
-else; a key press is neither easy to make by accident nor ambiguous about
-which key it was, and rubbing a cell out costs nothing and undoes. Held to the
-setting, `Delete` did not clear the cell and was swallowed doing nothing —
-the guard broke out of the handler after the keystroke had already been
-claimed. Check and Hint keep their `Shift`, because those two are counted
-against the puzzle and cannot be given back.
+Clear and Marks have no keyboard guard, whatever their buttons are set to. The
+guard is there because a 44px button is easy to catch with a thumb on the way
+to something else; a key press is neither easy to make by accident nor
+ambiguous about which key it was, and rubbing a cell out or filling in the
+marks costs nothing and undoes. Held to the setting, `Delete` did not clear the
+cell and was swallowed doing nothing — the guard broke out of the handler after
+the keystroke had already been claimed. Check and Hint keep their `Shift`,
+because those two are counted against the puzzle and cannot be given back.
+
+A guarded button goes off on a hold and nothing else. A quick double-tap counts
+as a hold on a digit, where it forces the answer, but not on a guard: digits
+get double-tapped all the time, and a double-tap that lands on a tool instead
+is the very accident the guard is there for.
 
 The block is two three-by-threes: the nine digits, and the nine tools beside
-them drawn rather than named — a pencil for Marks, a rub-out key for Clear, a
-tick for Check, a bulb for Hint, a table for the combinations, then undo, zoom,
-pause and redo. Four colours still say which group a key belongs to before you
-look at the drawing, and each tool's title says whether it wants holding.
+them drawn rather than named. Along the top, a table for the combinations, a
+pencil for Marks and a tick for Check; through the middle, zoom, a bulb for
+Hint and pause; along the bottom, undo, redo and a rub-out key for Clear. Four
+colours still say which group a key belongs to before you look at the drawing,
+and each tool's title says whether it wants holding.
 
 It came to that the long way round. Two matching blocks of *words* came first,
 and the words had to shrink to twelve pixels to fit a key that size. The sudoku

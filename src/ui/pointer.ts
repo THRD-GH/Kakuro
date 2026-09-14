@@ -25,6 +25,12 @@ export interface TapOptions {
   onTap?: () => void;
   /** Long-press, and double-tap, which are the same intent by different means. */
   onHold?: () => void;
+  /**
+   * Whether a quick second tap stands in for a hold. On by default: on a digit
+   * it is the quicker way to force an answer. Off for a guarded tool, where a
+   * hold is asked for precisely so that nothing quick sets it off.
+   */
+  doubleTap?: boolean;
   /** Fire the tap as the finger lands rather than when it lifts. */
   tapOnDown?: boolean;
   /**
@@ -64,7 +70,7 @@ export function bindTap(node: HTMLElement, options: TapOptions): void {
     const now = performance.now();
     // A second tap inside the window is the same gesture as a long press. The
     // caller has already had the first tap and is expected to undo it.
-    if (options.onHold && now - lastTapAt < DOUBLE_MS) {
+    if (options.onHold && options.doubleTap !== false && now - lastTapAt < DOUBLE_MS) {
       lastTapAt = 0;
       options.onHold();
       return;

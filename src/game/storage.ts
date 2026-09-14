@@ -45,9 +45,13 @@ export interface Settings {
   /** Hold a wake lock while a puzzle is open, so the screen stops dimming. */
   keepAwake: boolean;
   showTimer: boolean;
-  /** Check and Clear are counted against the puzzle, so they are guarded. */
+  /**
+   * Tools that want a hold rather than a tap. Check and Hint are counted
+   * against the puzzle; Marks and Clear are guarded against a stray thumb.
+   */
   checkNeedsHold: boolean;
   hintNeedsHold: boolean;
+  marksNeedsHold: boolean;
   clearNeedsHold: boolean;
   /** What sits behind the screens: 'none', a pattern's id, or 'custom' for a photo. */
   background: string;
@@ -68,6 +72,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showTimer: true,
   checkNeedsHold: true,
   hintNeedsHold: false,
+  marksNeedsHold: true,
   clearNeedsHold: true,
   background: 'none',
   backgroundDim: 0.55,

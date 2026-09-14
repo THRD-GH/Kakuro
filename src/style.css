@@ -1751,11 +1751,40 @@ p {
     max-width: 82rem;
   }
 
+  /*
+   * Only as tall as the game. The play screen was the height of the window,
+   * because the board takes its size from the space it is given — and on a
+   * desktop the board is limited by the width of its column long before the
+   * height, so everything under it was the spare end of a row nobody used.
+   * Invisible on a plain page; with a picture behind it the frame drawn round
+   * the play screen ran from the top of the window to the bottom, with the
+   * game in its top two thirds. killer-sudoku's frame had the same fault.
+   *
+   * The screen cannot simply shrink to its content, since the board would
+   * then have nothing definite to measure itself against. So the board's area
+   * is made square instead — as wide as its column, and never taller than the
+   * window allows once the bar and the frame are paid for — and the screen
+   * ends under whichever is taller, the board or the column beside it.
+   */
   .play {
+    --row-max: calc(
+      100dvh - 5.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom) - var(--frame, 0px)
+    );
     display: grid;
     grid-template-columns: minmax(0, 1fr) 19rem;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 0.5rem 0.75rem;
+    grid-template-rows: auto auto;
+    /* Wide enough for the board's hard shadow to sit clear of the controls. */
+    gap: 0.5rem 1.25rem;
+    height: auto;
+    /* And no wider than the board that fits that height plus the column beside
+       it. Capped by the height, the board kept to the left of a column far
+       wider than itself, and left 300px of empty frame between it and the
+       controls. Centred, the frame hugs the game in both directions. */
+    max-width: calc(var(--row-max) + 19rem + 1.25rem + var(--frame, 0px));
+    margin-inline: auto;
+    /* Nothing spills from a screen its own height, and a clip here cut the
+       board's shadow off where the board meets the foot of the screen. */
+    overflow: visible;
   }
 
   .play-bar {
@@ -1766,6 +1795,8 @@ p {
   .board-area {
     grid-column: 1;
     grid-row: 2;
+    aspect-ratio: 1 / 1;
+    max-height: var(--row-max);
   }
 
   /*
@@ -1780,6 +1811,10 @@ p {
     grid-column: 2;
     grid-row: 2;
     min-height: 0;
+    /* Never taller than the board may be, so a long list of combinations
+       scrolls inside its panel rather than stretching the screen past the
+       window. */
+    max-height: var(--row-max);
   }
 
   /*
@@ -1799,6 +1834,7 @@ p {
    */
   .side > .combos-wrap {
     flex: 0 1 auto;
+    min-height: 0;
     max-height: none;
     box-shadow: none;
     backdrop-filter: none;
@@ -2033,21 +2069,37 @@ p {
  * it: the image, then the page colour laid over it at the chosen dim, and the
  * game on top in a framed mat, so nothing readable ever sits on the picture.
  */
+/*
+ * The picture is pinned to the window, not painted on the body. Painted on
+ * the body it covered the body, and the body is only as tall as what is on
+ * it: once the play screen ended where the game does, the pattern stopped
+ * there too and the rest of the window was plain page colour. A fixed layer
+ * fills the window whatever is on it and holds still while a page scrolls —
+ * which `background-attachment: fixed` would do too, except that mobile
+ * Safari ignores it. The body goes transparent so it cannot paint over it.
+ */
 body.has-bg {
-  background-image: var(--bg-image);
-  background-position: 50%;
-  background-repeat: no-repeat;
-  background-size: cover;
+  background: transparent;
 }
 
 body.has-bg::before {
   content: '';
   position: fixed;
   inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: var(--bg-image) center / cover no-repeat;
+}
+
+/* The page colour over it, at the chosen dim. */
+body.has-bg::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background: var(--bg);
   opacity: var(--bg-dim, 0.55);
-  pointer-events: none;
-  z-index: -1;
 }
 
 body.has-bg .menu,
@@ -2056,6 +2108,12 @@ body.has-bg .play {
   border: 2px solid var(--line-strong);
   box-shadow: 9px 11px 0 var(--shadow);
   padding: 0.75rem;
+}
+
+/* The frame's own padding and border, which the board's height cap on a
+   desktop has to leave room for. */
+body.has-bg .play {
+  --frame: calc(1.5rem + 4px);
 }
 
 /*

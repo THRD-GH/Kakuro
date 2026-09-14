@@ -220,10 +220,22 @@ gets a tile or a tab, so nothing readable ever sits on the image. The board's
 rules are translucent ink drawn through the gaps between cells, so behind a
 picture they sit on the page colour rather than showing the picture through.
 
-The play screen is sized to the window, unlike killer's, so the mat is drawn
-inside that height rather than added to it: a mat added to it pushed a board
-sized to the exact screen off the bottom, which is how Sudoku Variants found
-it had to do the same.
+On a desktop the frame ends where the game does. The play screen used to be
+the height of the window, because the board takes its size from the space it
+is given — but a desktop board is limited by the width of its column long
+before the height, so the frame ran from the top of the window to the bottom
+with the game in its top two thirds, as killer's once did. The board's area is
+square instead: as wide as its column, and never taller than the window allows
+once the bar and the frame are paid for. When the height is what limits it,
+the play screen narrows to match, so the frame hugs the game both ways rather
+than leaving a band of empty sheet beside the board. On a phone the play
+screen is still sized to the window, and there is no frame to size.
+
+The picture is pinned to the window rather than painted on the page, so it
+covers the whole background whatever height the content is, and holds still
+while a page scrolls. Painted on the page, it stopped where the page did. The
+plain CSS for a fixed background would do the same, except that mobile Safari
+ignores it.
 
 **Settings split in two**, as killer's did: Game for how the puzzle behaves
 and how you write into it, Display for how it looks and what the device does.

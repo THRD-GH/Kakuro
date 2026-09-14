@@ -209,9 +209,13 @@ by the panel's shade, even bright colours were lost. The first version was five
 small single-colour bursts over in about two seconds, in the theme's muted
 colours, and did not read as fireworks at all.
 
-It scales to the screen: on a wide one the bursts come down beside a centred
-panel as well as above it, and where there is too little room above the panel
-the dojo is left out. Settings can turn the show off, and it never plays when
+It scales to the screen, and where there is too little room above the panel the
+dojo is left out. Every rocket climbs at 30° or more from the horizontal, in a
+direction dealt afresh for each show. Bursts used to be placed first and the
+rockets aimed at them, and on a wide screen the ones beside a centred panel had
+rockets flying out almost flat to reach them; now the direction comes first, and
+a test holds every rocket to the angle. Settings can turn the show off, and it
+never plays when
 the device asks for reduced motion: the stylesheet stills CSS animation for
 that, but a canvas is drawn by script and has to check for itself. Reopening a
 puzzle that was already finished shows the panel without it, and leaving for

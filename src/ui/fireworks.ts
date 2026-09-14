@@ -101,7 +101,7 @@ interface Flash {
 }
 
 /** Where everything goes, worked out once from the window and the panel. */
-interface Stage {
+export interface Stage {
   width: number;
   height: number;
   /** The dojo's centre, the line it stands on, and its width; null for a show without one. */
@@ -111,11 +111,6 @@ interface Stage {
   /** How high and how low bursts go over the panel. */
   skyTop: number;
   skyBottom: number;
-  /** Beside the panel, where a wide screen has room, bursts may come down this far. */
-  sideBottom: number;
-  /** The panel's span with a margin: over it, bursts keep to the sky. */
-  clearLeft: number;
-  clearRight: number;
   /** How wide a band, centred, the bursts spread across. */
   band: number;
   /** Where rockets go up from. */
@@ -128,6 +123,9 @@ const TAU = Math.PI * 2;
 const PALETTE = ['#ff7a5c', '#ffc857', '#6ec6ff', '#7ee08a', '#ff8fd0', '#b9a2ff'];
 const WHITE = '#fff4dc';
 const GOLD = '#ffc46b';
+
+/** No rocket climbs flatter than this from the horizontal: 30°. */
+export const MIN_CLIMB = Math.PI / 6;
 
 /**
  * The running order: shells of every kind, one or two at a time, then a finale
@@ -200,13 +198,11 @@ function particle(
   return { age: 0, shed: 0, trail: false, crackle: false, glitter: false, round: true, ...fields };
 }
 
-function stage(width: number, height: number, options: FireworksOptions): Stage {
+/** Where the dojo, the sky and the launch line go, from the window and the panel. Exported for the tests. */
+export function stage(width: number, height: number, options: FireworksOptions): Stage {
   const rect = options.above ? options.above.getBoundingClientRect() : null;
   const floor = rect ? Math.min(rect.top, height) : height;
   const reach = Math.min(Math.max(Math.min(width, height) * 0.28, 80), 190);
-  const clearLeft = rect ? rect.left - 30 : width / 2;
-  const clearRight = rect ? rect.right + 30 : width / 2;
-  const besideBottom = rect ? Math.min(rect.top + rect.height * 0.4, height * 0.62) : height * 0.5;
   const band = Math.min(width * 0.92, 1100);
   const room = floor - 8;
   if (options.dojo !== false && room >= 150) {
@@ -221,9 +217,6 @@ function stage(width: number, height: number, options: FireworksOptions): Stage 
       reach,
       skyTop,
       skyBottom: Math.max(skyTop, roof - reach * 0.3),
-      sideBottom: Math.max(skyTop, besideBottom),
-      clearLeft,
-      clearRight,
       band,
       launchY: floor,
     };
@@ -236,39 +229,50 @@ function stage(width: number, height: number, options: FireworksOptions): Stage 
     reach: reach * 0.85,
     skyTop,
     skyBottom: Math.max(skyTop, floor * 0.55),
-    sideBottom: Math.max(skyTop, besideBottom),
-    clearLeft,
-    clearRight,
     band,
     launchY: height + 10,
   };
 }
 
-/** A rocket for every cue, their bursts spread across the band so no two land together. */
-function plan(scene: Stage, colours: string[]): Rocket[] {
+/**
+ * A rocket for every cue, each climbing in a direction of its own, drawn afresh
+ * for every show and never flatter than MIN_CLIMB from the horizontal. Bursts
+ * used to be placed first and the rockets aimed at them, and those placed beside
+ * a centred panel on a wide screen had rockets flying out almost flat, or
+ * downhill, to reach them. Now the direction comes first, and the burst is
+ * wherever that direction reaches the height it goes off at.
+ *
+ * The directions are dealt from shuffled slices of what each rocket is allowed,
+ * so they spread across the sky rather than bunch. Exported for the tests.
+ */
+export function plan(scene: Stage, colours: string[]): Rocket[] {
   const early = SHOW.filter((cue) => !cue.finale);
-  const slots = shuffled(early.map((_, i) => (i + 0.5) / early.length));
-  const finaleSlots = shuffled([0.12, 0.38, 0.62, 0.88]);
+  const slices = shuffled(early.map((_, i) => (i + 0.5) / early.length));
+  const finaleSlices = shuffled([0.12, 0.38, 0.62, 0.88]);
   const left = (scene.width - scene.band) / 2;
+  const right = left + scene.band;
+  // The furthest a rocket may lean either way: how far across it goes for each pixel it climbs.
+  const lean = 1 / Math.tan(MIN_CLIMB);
   let hue = Math.floor(Math.random() * colours.length);
   return SHOW.map((cue) => {
-    const slot = (cue.finale ? finaleSlots.shift() : slots.shift()) ?? Math.random();
-    const toX = left + scene.band * slot + rand(-0.03, 0.03) * scene.band;
-    const beside = toX < scene.clearLeft || toX > scene.clearRight;
-    const lowest = beside ? scene.sideBottom : scene.skyBottom;
+    const slice = (cue.finale ? finaleSlices.shift() : slices.shift()) ?? Math.random();
     // The finale bursts high, where four at once have the room.
-    const toY = rand(scene.skyTop, cue.finale ? (scene.skyTop + lowest) / 2 : lowest);
-    // From behind the dojo, fanning out towards where each one bursts.
-    const fromX = scene.dojo
-      ? scene.dojo.cx + (toX - scene.dojo.cx) * 0.3 + rand(-0.15, 0.15) * scene.dojo.w
-      : toX + rand(-40, 40);
+    const toY = rand(scene.skyTop, cue.finale ? (scene.skyTop + scene.skyBottom) / 2 : scene.skyBottom);
+    // From behind the dojo, or from below the window when there is none.
+    const fromX = scene.dojo ? scene.dojo.cx + rand(-0.3, 0.3) * scene.dojo.w : rand(left, right);
+    const climb = Math.max(scene.launchY - toY, 1);
+    // Leaning no further than the angle allows, nor so far that the burst leaves the band.
+    const most = Math.max(0, Math.min(lean, (right - fromX) / climb));
+    const least = Math.min(0, Math.max(-lean, (left - fromX) / climb));
+    const across = least + (most - least) * Math.min(Math.max(slice + rand(-0.04, 0.04), 0), 1);
+    const toX = fromX + across * climb;
     const colour = colours[hue % colours.length] ?? GOLD;
     const second = colours[(hue + 2) % colours.length] ?? WHITE;
     hue += 1;
     const size = cue.finale ? 1.1 : cue.shell === 'ring' ? 0.8 : cue.shell === 'willow' ? 0.9 : 1;
     return {
       at: cue.at,
-      rise: Math.min(650 + Math.hypot(toX - fromX, toY - scene.launchY) * 0.9, 1150),
+      rise: Math.min(650 + Math.hypot(toX - fromX, climb) * 0.9, 1150),
       fromX,
       fromY: scene.launchY,
       toX,

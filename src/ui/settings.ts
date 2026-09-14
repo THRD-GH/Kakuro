@@ -52,7 +52,7 @@ const TOGGLES: Toggle[] = [
   {
     key: 'fireworks',
     title: 'Fireworks when solved',
-    detail: 'A few seconds of them above a dojo as the last digit goes in. Never shown when the device asks for reduced motion.',
+    detail: 'About eight seconds of them above a dojo when the last digit goes in. Never shown when the device asks for reduced motion.',
   },
 ];
 

@@ -2331,3 +2331,130 @@ body.has-bg .board {
     display: none;
   }
 }
+
+/* ------------------------------------------------------------------ stats */
+
+/*
+ * Stats, as killer-sudoku lays it out: the totals, the unfinished games, and
+ * the puzzles of one board and belt. A screen of its own that scrolls — it is a
+ * place to read, not somewhere a thumb has to reach everything from.
+ */
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-bottom: 1rem;
+}
+
+/* On a picture, framed and backed as the menu is, so the figures are not read off the image. */
+body.has-bg .stats {
+  background: var(--bg);
+  border: 2px solid var(--line-strong);
+  box-shadow: 9px 11px 0 var(--shadow);
+  padding: 0.75rem;
+}
+
+/* Stamped, as the menu's section labels are. */
+.stats-heading {
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.69rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+}
+
+.stats-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.stats-tile {
+  min-width: 0;
+  padding: 0.5rem 0.3rem;
+  text-align: center;
+  background: var(--panel);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.stats-tile b {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A long label, "best · KAM3-412", must not stretch its column. */
+.stats-tile small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--dim);
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-spread {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Six belts and four boards: they wrap on a phone rather than squeeze. */
+.stats-tabs {
+  flex-wrap: wrap;
+}
+
+.stats-rows {
+  display: grid;
+  gap: 3px;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Solved and out of the pool, in the settled green the board uses; held, it goes back. */
+.stats-row.solved {
+  border-left-color: var(--met);
+  cursor: pointer;
+}
+
+/* Back in the pool: the same green, dashed, as a line that has been let go. */
+.stats-row.released {
+  border-left-style: dashed;
+  border-left-color: var(--met);
+}
+
+.stats-when {
+  color: var(--dim);
+  font-size: 0.72rem;
+}
+
+.stats-time {
+  font-weight: 700;
+}
+
+.stats-actions {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}

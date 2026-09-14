@@ -5,14 +5,17 @@ import { openResumePicker } from './resume-picker.ts';
 import type { AppContext } from './app-context.ts';
 import { BELTS, belt } from './belt.ts';
 import { buildStamp, el } from './dom.ts';
-import { helpIcon, settingsIcon } from './icons.ts';
+import { helpIcon, settingsIcon, statsIcon } from './icons.ts';
 import { openLevelInfo } from './level-info.ts';
 
 export function buildMenu(app: AppContext): HTMLElement {
   const node = el('div', { class: 'menu' });
 
-  // Help and Settings stay one tap away rather than going behind a ☰ as they
-  // do in killer: with only the two of them, a menu would only add a tap.
+  // Stats, Help and Settings stay one tap away rather than going behind a ☰ as
+  // they do in killer: with only three of them, a menu would only add a tap.
+  const stats = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Stats', title: 'Stats' });
+  stats.append(statsIcon());
+  stats.addEventListener('click', () => app.goStats(1));
   const help = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'How to play', title: 'How to play' });
   help.append(helpIcon());
   help.addEventListener('click', () => app.openHelp());
@@ -25,7 +28,7 @@ export function buildMenu(app: AppContext): HTMLElement {
       'header',
       { class: 'titlebar' },
       el('span', { class: 'id', text: 'Kakuro' }),
-      el('div', { class: 'titlebar-actions' }, help, settings),
+      el('div', { class: 'titlebar-actions' }, stats, help, settings),
     ),
     /*
      * The kicker names the family, as the other DanDoku games do. Two choices

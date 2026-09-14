@@ -24,6 +24,7 @@ import { closeAllOverlays, closeTopOverlay, onOverlayClose, onOverlayOpen, overl
 import { previewFireworks } from './ui/celebration.ts';
 import { PlayScreen } from './ui/play.ts';
 import { openSettings } from './ui/settings.ts';
+import { buildStats } from './ui/stats.ts';
 import { applyBackground } from './ui/backgrounds.ts';
 
 /** The browser chrome colour that matches each board, for the PWA title bar. */
@@ -49,6 +50,7 @@ class App implements AppContext {
 
   private root: HTMLElement;
   private play: PlayScreen | null = null;
+  statsReturn: PuzzleId | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -129,10 +131,39 @@ class App implements AppContext {
     this.play?.destroy();
     this.play = null;
     this.onMenu = true;
+    this.statsReturn = null;
     clear(this.root);
     this.root.append(buildMenu(this));
     this.syncGuard();
     this.applyWakeLock();
+  }
+
+  /*
+   * Stats, from the menu or from inside a puzzle. From a puzzle the game is
+   * saved first: the play screen writes its save on a timer, and taking it down
+   * without a flush would lose the last few moves — the very ones "Back to"
+   * promises to hand back.
+   */
+  goStats(level: Level): void {
+    const from = this.play?.puzzleId ?? null;
+    this.play?.flushSave();
+    closeAllOverlays();
+    this.play?.destroy();
+    this.play = null;
+    this.onMenu = false;
+    this.statsReturn = from;
+    clear(this.root);
+    this.root.append(buildStats(this, level));
+    this.syncGuard();
+    this.applyWakeLock();
+  }
+
+  /** Opened from a puzzle, Stats hands it back, rebuilt from its save; opened from the menu, back is the menu. */
+  leaveStats(): void {
+    const id = this.statsReturn;
+    this.statsReturn = null;
+    if (id === null) this.goMenu();
+    else this.playPuzzle(id);
   }
 
   openHelp(): void {
@@ -146,6 +177,7 @@ class App implements AppContext {
   playPuzzle(id: PuzzleId): void {
     closeAllOverlays();
     this.onMenu = false;
+    this.statsReturn = null;
     clear(this.root);
     this.root.append(
       el(
@@ -296,7 +328,9 @@ class App implements AppContext {
       // Not an entry we were holding, so there is nothing of ours to spend.
       if (!this.guarded) return;
       this.guarded = false;
-      if (!this.onMenu) this.goMenu();
+      // Back out of Stats goes wherever its own Back goes.
+      if (this.statsReturn !== null) this.leaveStats();
+      else if (!this.onMenu) this.goMenu();
     });
   }
 

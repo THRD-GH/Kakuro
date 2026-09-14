@@ -6,14 +6,22 @@ import { GENERATOR_VERSION, generatePuzzle } from '../src/core/generator.ts';
 import {
   DEFAULT_SETTINGS,
   dropSave,
+  dropSavesFor,
   exportBackup,
+  finishedCount,
   importBackup,
   loadHistory,
   loadSettings,
+  poolStats,
   putSave,
+  recordFinish,
+  releasePuzzle,
+  resetPool,
   saveHistory,
   saveSettings,
+  totalStats,
   unfinishedSaves,
+  unplayedNumbers,
 } from '../src/game/storage.ts';
 
 // A minimal localStorage, since node has none.
@@ -187,4 +195,64 @@ test('a keypad side that is not left or right falls back to left', () => {
   saveSettings({ ...DEFAULT_SETTINGS, keypadSide: 'right' });
   assert.equal(loadSettings().keypadSide, 'right');
   assert.equal(loadSettings().undoNeedsHold, false);
+});
+
+// -------------------------------------------------------------------- stats
+
+test('a released puzzle is back in the pool but keeps its best time, until it is solved again', () => {
+  store.clear();
+  const id = { size: 9 as const, level: 1 as const, number: 7 };
+  let history = recordFinish({}, id, 90000, 1, 0);
+  assert.equal(unplayedNumbers(history, { size: 9, level: 1 }, 10).includes(7), false);
+  assert.equal(finishedCount(history, { size: 9, level: 1 }, 10), 1);
+
+  history = releasePuzzle(history, id);
+  assert.equal(unplayedNumbers(history, { size: 9, level: 1 }, 10).includes(7), true);
+  assert.equal(finishedCount(history, { size: 9, level: 1 }, 10), 0);
+  assert.equal(history['9-1-7']?.bestMs, 90000);
+
+  history = recordFinish(history, id, 95000, 0, 0);
+  assert.equal(history['9-1-7']?.released, false);
+  assert.equal(history['9-1-7']?.bestMs, 90000);
+  assert.equal(unplayedNumbers(history, { size: 9, level: 1 }, 10).includes(7), false);
+});
+
+test('the totals count every board and belt, with the best, the streak and solves per belt', () => {
+  const day = 86_400_000;
+  const now = new Date(2026, 8, 15, 12).getTime();
+  const history = {
+    '9-1-1': { finished: true, bestMs: 60000, bestAt: now - 2 * 3_600_000, hints: 1, checks: 0 },
+    '12-3-4': { finished: true, bestMs: 45000, bestAt: now - day, hints: 0, checks: 2 },
+    '20-6-9': { finished: true, bestMs: 300000, bestAt: now - 3 * day, hints: 0, checks: 0 },
+    '16-2-5': { finished: false, startedAt: now - day },
+  };
+  const totals = totalStats(history, now);
+  assert.equal(totals.played, 4);
+  assert.equal(totals.finished, 3);
+  assert.equal(totals.averageMs, Math.round((60000 + 45000 + 300000) / 3));
+  assert.deepEqual(totals.best, { id: { size: 12, level: 3, number: 4 }, ms: 45000 });
+  // Today and yesterday; the day before that has nothing, so the run stops.
+  assert.equal(totals.streak, 2);
+  assert.deepEqual([totals.byLevel[1], totals.byLevel[3], totals.byLevel[6], totals.byLevel[2]], [1, 1, 1, 0]);
+  assert.equal(totals.hints, 1);
+  assert.equal(totals.checks, 2);
+});
+
+test('a board and belt is summed on its own, and resetting it takes its unfinished games with it', () => {
+  store.clear();
+  const history = {
+    '9-1-1': { finished: true, bestMs: 60000, bestAt: 1 },
+    '9-1-2': { finished: false, startedAt: 1 },
+    '9-2-1': { finished: true, bestMs: 30000, bestAt: 1 },
+  };
+  assert.deepEqual(poolStats(history, { size: 9, level: 1 }), { played: 2, finished: 1, averageMs: 60000 });
+
+  putSave({ id: { size: 9, level: 1, number: 2 }, ...saveBody({}) } as Parameters<typeof putSave>[0]);
+  putSave({ id: { size: 9, level: 2, number: 3 }, ...saveBody({}) } as Parameters<typeof putSave>[0]);
+  assert.deepEqual(Object.keys(resetPool(history, { size: 9, level: 1 })), ['9-2-1']);
+  assert.equal(dropSavesFor({ size: 9, level: 1 }), 1);
+  assert.deepEqual(
+    unfinishedSaves().map((save) => `${save.id.level}-${save.id.number}`),
+    ['2-3'],
+  );
 });

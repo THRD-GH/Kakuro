@@ -103,6 +103,11 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export interface PuzzleRecord {
   finished: boolean;
+  /**
+   * Put back in the pool from Stats: solved, with its best time kept, but
+   * counted as unplayed again, so the menu deals it and counts it as left.
+   */
+  released?: boolean;
   /** When it was first opened, so unfinished games can be listed newest first. */
   startedAt?: number;
   bestMs?: number;
@@ -205,6 +210,8 @@ export function recordFinish(
     [key]: {
       ...entry,
       finished: true,
+      // Solved again, so out of the pool again.
+      released: false,
       bestMs: best ? ms : entry.bestMs,
       bestAt: best ? Date.now() : entry.bestAt,
       hints: best ? hints : (entry.hints ?? hints),
@@ -222,7 +229,7 @@ export function forgetPuzzle(history: History, id: PuzzleId): History {
   return next;
 }
 
-/** Puzzle numbers of this size and level that have never been finished. */
+/** Puzzle numbers of this size and level never finished, or put back in the pool since. */
 export function unplayedNumbers(
   history: History,
   id: Omit<PuzzleId, 'number'>,
@@ -230,18 +237,129 @@ export function unplayedNumbers(
 ): number[] {
   const out: number[] = [];
   for (let number = 1; number <= pool; number++) {
-    if (!history[historyKey({ ...id, number })]?.finished) out.push(number);
+    const record = history[historyKey({ ...id, number })];
+    if (!record?.finished || record.released) out.push(number);
   }
   return out;
 }
 
-/** How many of a size and level's puzzles have been finished. */
+/** How many of a size and level's puzzles are finished and still out of the pool. */
 export function finishedCount(history: History, id: Omit<PuzzleId, 'number'>, pool: number): number {
   let done = 0;
   for (let number = 1; number <= pool; number++) {
-    if (history[historyKey({ ...id, number })]?.finished) done++;
+    const record = history[historyKey({ ...id, number })];
+    if (record?.finished && !record.released) done++;
   }
   return done;
+}
+
+/** Put a solved puzzle back in the pool, keeping its best time: what holding its row in Stats does. */
+export function releasePuzzle(history: History, id: PuzzleId): History {
+  const key = historyKey(id);
+  const entry = history[key];
+  if (!entry?.finished) return history;
+  return { ...history, [key]: { ...entry, released: true } };
+}
+
+/**
+ * Forget every puzzle of one board and belt, whatever its number, so the whole
+ * pool is unplayed again — including numbers above the pool size now chosen.
+ */
+export function resetPool(history: History, pool: Omit<PuzzleId, 'number'>): History {
+  const next: History = {};
+  for (const [key, record] of Object.entries(history)) {
+    const id = parsePuzzleId(key);
+    if (id && id.size === pool.size && id.level === pool.level) continue;
+    next[key] = record;
+  }
+  return next;
+}
+
+// --------------------------------------------------------------------- stats
+
+export interface PoolStats {
+  /** Puzzles of this board and belt opened or solved. */
+  played: number;
+  finished: number;
+  /** The mean of their best times, or null before the first solve. */
+  averageMs: number | null;
+}
+
+/** One board and belt, as Stats sums it, counting every record whatever the pool size now. */
+export function poolStats(history: History, pool: Omit<PuzzleId, 'number'>): PoolStats {
+  let played = 0;
+  let finished = 0;
+  let total = 0;
+  for (const [key, record] of Object.entries(history)) {
+    const id = parsePuzzleId(key);
+    if (!id || id.size !== pool.size || id.level !== pool.level) continue;
+    played++;
+    if (record.finished && record.bestMs !== undefined) {
+      finished++;
+      total += record.bestMs;
+    }
+  }
+  return { played, finished, averageMs: finished > 0 ? Math.round(total / finished) : null };
+}
+
+export interface TotalStats {
+  played: number;
+  finished: number;
+  averageMs: number | null;
+  best: { id: PuzzleId; ms: number } | null;
+  hints: number;
+  checks: number;
+  /** Days in a row, up to today, with at least one puzzle solved. */
+  streak: number;
+  /** Puzzles solved per belt, indexed 1 to 6. */
+  byLevel: number[];
+}
+
+/** The day a timestamp falls on, in the reader's own time zone. */
+const dayNumber = (ms: number): number => {
+  const d = new Date(ms);
+  return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000);
+};
+
+/** Everything played, across every board and belt, as killer-sudoku totals its own. */
+export function totalStats(history: History, now = Date.now()): TotalStats {
+  const out: TotalStats = {
+    played: 0,
+    finished: 0,
+    averageMs: null,
+    best: null,
+    hints: 0,
+    checks: 0,
+    streak: 0,
+    byLevel: new Array<number>(7).fill(0),
+  };
+  let total = 0;
+  const days = new Set<number>();
+
+  for (const [key, record] of Object.entries(history)) {
+    const id = parsePuzzleId(key);
+    if (!id) continue;
+    out.played++;
+    out.hints += record.hints ?? 0;
+    out.checks += record.checks ?? 0;
+    if (!record.finished || record.bestMs === undefined) continue;
+    out.finished++;
+    total += record.bestMs;
+    out.byLevel[id.level] = (out.byLevel[id.level] ?? 0) + 1;
+    if (out.best === null || record.bestMs < out.best.ms) out.best = { id, ms: record.bestMs };
+    if (record.bestAt !== undefined) days.add(dayNumber(record.bestAt));
+  }
+  out.averageMs = out.finished > 0 ? Math.round(total / out.finished) : null;
+
+  // Counted back from today, or from yesterday when today has not been played
+  // yet: an evening habit should not read as broken all morning.
+  const today = dayNumber(now);
+  let day = days.has(today) ? today : today - 1;
+  while (days.has(day)) {
+    out.streak++;
+    day--;
+  }
+  return out;
 }
 
 // --------------------------------------------------------------------- saves
@@ -362,6 +480,19 @@ export function dropSave(id: PuzzleId): void {
   const table = loadSaves();
   delete table[historyKey(id)];
   write(KEY.save, table);
+}
+
+/** Throw away every unfinished game of one board and belt, as a reset from Stats does. */
+export function dropSavesFor(pool: Omit<PuzzleId, 'number'>): number {
+  const table = loadSaves();
+  let dropped = 0;
+  for (const [key, save] of Object.entries(table)) {
+    if (save.id.size !== pool.size || save.id.level !== pool.level) continue;
+    delete table[key];
+    dropped++;
+  }
+  if (dropped > 0) write(KEY.save, table);
+  return dropped;
 }
 
 // -------------------------------------------------------------------- backup

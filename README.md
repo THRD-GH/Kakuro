@@ -239,6 +239,25 @@ for reduced motion the panel says why there is nothing to see.
 is: no imports, no stylesheet, the dojo's colours from the house tokens every
 one of them defines, and the panel to stand on passed in.
 
+## Stats
+
+The chart on the menu bar, or Stats in a puzzle's own menu, opens a screen laid
+out as killer-sudoku's is. First the totals across everything played: puzzles
+solved of those opened, the average and best times, the run of days with a
+puzzle solved, the hints and checks spent, and how many were solved on each
+belt. Then the unfinished games — the same saved games the menu's picker lists,
+drawn by the same row, with the same tap to pick one up and bin to throw it
+away. Last, the puzzles of one board and belt: a row of belts and a row of
+boards where killer has levels and sources, a line of what has been played,
+solved and is left, and a row for each puzzle with its date and best time.
+
+A solved puzzle is out of the pool, so the menu does not deal it again. Holding
+its row in Stats puts it back, counted as left and dealt again, without losing
+its best time; solving it again takes it back out. Reset clears a board and belt
+outright, unfinished games with it, after asking. Opened from a puzzle, Stats
+saves the game first and its way out leads back to that puzzle, board and clock
+as they were, and the phone's back gesture goes the same way.
+
 ## Your data and the pool
 
 The Game tab of Settings ends with **Your data**, as in the other DanDoku games,

@@ -20,6 +20,12 @@ export interface AppContext {
   /** Repaint the board in place, after a highlighting setting changes. */
   refreshBoard(): void;
   goMenu(): void;
+  /** The puzzle Stats was opened from, to hand back on the way out; null when it came from the menu. */
+  statsReturn: PuzzleId | null;
+  /** Open Stats on a belt, from the menu or from inside a puzzle. */
+  goStats(level: Level): void;
+  /** Leave Stats for wherever it was opened from. */
+  leaveStats(): void;
   /** Redraw the menu behind an open panel, after a setting it shows has changed. */
   refreshMenu(): void;
   /** Read settings and history back from storage after a backup is restored, and start again from the menu. */

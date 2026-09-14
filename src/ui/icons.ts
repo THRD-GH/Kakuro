@@ -159,3 +159,22 @@ export const unzoomIcon = (): SVGSVGElement =>
     ['polyline', { ...line, points: '6.75 12.75 6.75 9.25 3.25 9.25' }],
     ['line', { ...line, x1: '2.75', y1: '13.25', x2: '6.75', y2: '9.25' }],
   );
+
+/** Stats: a chart of three bars, rising, on its baseline. */
+export const statsIcon = (): SVGSVGElement =>
+  icon(['path', { ...line, d: 'M2.5 14h11M4.5 11.5V9M8 11.5V5.5M11.5 11.5V2.5' }]);
+
+/** A bin: throw a game away. Drawn at a fixed 15px, as it always has been beside a row. */
+export const binIcon = (): SVGSVGElement => {
+  const svg = icon([
+    'path',
+    {
+      ...line,
+      'stroke-width': '1.3',
+      d: 'M6 2h4l.5 1H14v1.5H2V3h3.5L6 2zM3.5 6h9l-.7 8.2a1 1 0 0 1-1 .8H5.2a1 1 0 0 1-1-.8L3.5 6zm2.6 1.8.3 5.4M8 7.8v5.4m1.6-5.4-.3 5.4',
+    },
+  ]);
+  svg.setAttribute('width', '15');
+  svg.setAttribute('height', '15');
+  return svg;
+};

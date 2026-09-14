@@ -839,6 +839,7 @@ export class PlayScreen {
           this.afterEdit();
         }),
       ),
+      item('Stats', 'Times, streaks and what is left, then back to this puzzle', () => this.app.goStats(this.game.id.level)),
       item('Settings', 'Theme, highlighting, guarded buttons', () => this.app.openSettings()),
       item('How to play', 'The rules and what the buttons do', () => this.app.openHelp()),
     );
@@ -896,6 +897,10 @@ export class PlayScreen {
       this.saveTimer = null;
       putSave(this.game.toSave());
     }, 800);
+  }
+
+  get puzzleId(): PuzzleId {
+    return this.game.id;
   }
 
   flushSave(): void {

@@ -81,7 +81,10 @@ The menus stay where they were.
 
 The drawings are SVG rather than text glyphs. As characters, `↶` and `↷` were a
 gamble on the font — missing from several UI faces, or arriving at a different
-weight and baseline from their neighbours.
+weight and baseline from their neighbours. The bars' `?`, `⚙`, `←` and `⋯` are
+drawn for the same reason: as characters the cog came out as a coloured emoji
+on some phones, and the dots and the arrow sat at a different height in each
+face.
 
 A mode is the wrong shape for this. It was invisible at the moment it counted:
 you found out which one you were in from what came up in the cell, and by then

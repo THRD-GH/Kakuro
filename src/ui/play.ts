@@ -6,7 +6,20 @@ import { Game } from '../game/state.ts';
 import type { SavedGame } from '../game/storage.ts';
 import { dropSave, puzzleLink, putSave, recordFinish, recordStart, saveSettings } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
-import { checkIcon, eraseIcon, hintIcon, marksIcon, pauseIcon, playIcon, redoIcon, tableIcon, undoIcon, zoomIcon } from './icons.ts';
+import {
+  backIcon,
+  checkIcon,
+  eraseIcon,
+  hintIcon,
+  marksIcon,
+  moreIcon,
+  pauseIcon,
+  playIcon,
+  redoIcon,
+  tableIcon,
+  undoIcon,
+  zoomIcon,
+} from './icons.ts';
 import { Board } from './board.ts';
 import { CombosBar, fillCandidates } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
@@ -226,10 +239,12 @@ export class PlayScreen {
   // -------------------------------------------------------------- furniture
 
   private topBar(id: PuzzleId, puzzle: Puzzle): HTMLElement {
-    const back = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Back to the menu' }, '←');
+    const back = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Back to the menu', title: 'Back to the menu' });
+    back.append(backIcon());
     back.addEventListener('click', () => this.leave());
 
-    const menu = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Puzzle menu' }, '⋯');
+    const menu = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Puzzle menu', title: 'Puzzle menu' });
+    menu.append(moreIcon());
     menu.addEventListener('click', () => this.openGameMenu());
 
     const stars = `${'★'.repeat(puzzle.difficulty)}${'☆'.repeat(6 - puzzle.difficulty)}`;

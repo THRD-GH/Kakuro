@@ -1,5 +1,6 @@
 /**
- * The tools carry a shape rather than a word — all nine beside the digits,
+ * The tools carry a shape rather than a word — all nine beside the digits and
+ * the four in the bars,
  * since a word in a key the size of a digit either shrinks to twelve pixels
  * or takes room the board wants.
  *
@@ -93,4 +94,59 @@ export const tableIcon = (): SVGSVGElement =>
   icon(
     ['rect', { ...line, x: '2.2', y: '2.8', width: '11.6', height: '10.4', rx: '1' }],
     ['path', { ...line, d: 'M2.2 6.3h11.6M2.2 9.8h11.6M6.3 6.3v6.9' }],
+  );
+
+/** Back to the menu: an arrow pointing the way out. */
+export const backIcon = (): SVGSVGElement =>
+  icon(
+    ['line', { ...line, x1: '13', y1: '8', x2: '3.2', y2: '8' }],
+    ['polyline', { ...line, points: '7.4 3.8 3.2 8 7.4 12.2' }],
+  );
+
+/** The puzzle menu: three dots, which as the ⋯ character sat low in one face and high in another. */
+export const moreIcon = (): SVGSVGElement =>
+  icon(
+    ['circle', { cx: '3.4', cy: '8', r: '1.35', fill: 'currentColor' }],
+    ['circle', { cx: '8', cy: '8', r: '1.35', fill: 'currentColor' }],
+    ['circle', { cx: '12.6', cy: '8', r: '1.35', fill: 'currentColor' }],
+  );
+
+/** How to play: a question mark in a ring. */
+export const helpIcon = (): SVGSVGElement =>
+  icon(
+    ['circle', { ...line, cx: '8', cy: '8', r: '6.4' }],
+    ['path', { ...line, d: 'M6.1 6.2a1.95 1.95 0 1 1 2.75 1.78c-.55.25-.85.7-.85 1.3v.45' }],
+    ['circle', { cx: '8', cy: '11.6', r: '0.95', fill: 'currentColor' }],
+  );
+
+/**
+ * A cog of eight teeth, worked out rather than typed: as the ⚙ character
+ * several phones drew it as a coloured emoji, and others as a speck.
+ */
+const COG = ((): string => {
+  const teeth = 8;
+  const outer = 6.9;
+  const inner = 5.1;
+  const half = Math.PI / teeth;
+  const points: string[] = [];
+  for (let i = 0; i < teeth; i++) {
+    const at = (i * 2 * Math.PI) / teeth - Math.PI / 2;
+    const corners: [number, number][] = [
+      [inner, -half * 0.62],
+      [outer, -half * 0.36],
+      [outer, half * 0.36],
+      [inner, half * 0.62],
+    ];
+    for (const [radius, offset] of corners) {
+      points.push(`${(8 + radius * Math.cos(at + offset)).toFixed(2)} ${(8 + radius * Math.sin(at + offset)).toFixed(2)}`);
+    }
+  }
+  return `M${points.join('L')}Z`;
+})();
+
+/** Settings. */
+export const settingsIcon = (): SVGSVGElement =>
+  icon(
+    ['path', { ...line, 'stroke-width': '1.4', d: COG }],
+    ['circle', { ...line, 'stroke-width': '1.4', cx: '8', cy: '8', r: '2.1' }],
   );

@@ -281,6 +281,15 @@ p {
   background: var(--panel-2);
 }
 
+/* Drawn like the keypad's, and for the same reason: as characters the cog
+   came out as a coloured emoji on some phones, and the dots and the arrow sat
+   at a different height in every face. */
+.icon-button svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: block;
+}
+
 /* Set left, editorially: a kicker naming the family, then a big tight title. */
 .hero {
   padding: 0.75rem 0.1rem 0.15rem;

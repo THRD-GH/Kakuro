@@ -5,6 +5,7 @@ import { openResumePicker } from './resume-picker.ts';
 import type { AppContext } from './app-context.ts';
 import { BELTS, belt } from './belt.ts';
 import { buildStamp, el } from './dom.ts';
+import { helpIcon, settingsIcon } from './icons.ts';
 import { openLevelInfo } from './level-info.ts';
 
 export function buildMenu(app: AppContext): HTMLElement {
@@ -12,9 +13,11 @@ export function buildMenu(app: AppContext): HTMLElement {
 
   // Help and Settings stay one tap away rather than going behind a ☰ as they
   // do in killer: with only the two of them, a menu would only add a tap.
-  const help = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'How to play', title: 'How to play' }, '?');
+  const help = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'How to play', title: 'How to play' });
+  help.append(helpIcon());
   help.addEventListener('click', () => app.openHelp());
-  const settings = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Settings', title: 'Settings' }, '⚙');
+  const settings = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Settings', title: 'Settings' });
+  settings.append(settingsIcon());
   settings.addEventListener('click', () => app.openSettings());
 
   node.append(

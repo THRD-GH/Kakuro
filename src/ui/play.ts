@@ -29,8 +29,15 @@ export class PlayScreen {
   private hintNote: HTMLElement;
 
   private zoomed = false;
-  /** The same breakpoint the stylesheet uses to put the controls beside the board. */
-  private wide = window.matchMedia('(min-width: 46rem) and (min-height: 34rem)');
+  /**
+   * The layouts that put the controls beside the board, matching the
+   * stylesheet's two queries: a wide screen, or a phone on its side. In both,
+   * the combination strip belongs in the column under the controls rather than
+   * floating over a board with no height to spare.
+   */
+  private wide = window.matchMedia(
+    '(min-width: 46rem) and (min-height: 34rem), (orientation: landscape) and (max-height: 560px)',
+  );
   private zoomButton!: HTMLButtonElement;
   private pauseButton!: HTMLButtonElement;
   private tableButton!: HTMLButtonElement;

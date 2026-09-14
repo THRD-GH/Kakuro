@@ -557,9 +557,33 @@ p {
 
 /* --------------------------------------------------------------- the board */
 
+/*
+ * The bar keeps its four things on any width. The back button, the clock and
+ * the puzzle menu hold their size; the puzzle's name is the part that gives
+ * way, its stars and board trimming to an ellipsis before anything is pushed.
+ *
+ * Left to size itself the name could not shrink below its own text, and the
+ * play screen clips whatever spills past its edge — so on a narrow phone, or
+ * one set to larger text, the ⋯ at the right-hand end was the thing that went,
+ * and with it the menu behind it. killer-sudoku's bar had the same fault and
+ * the same answer: the label gives way, the controls do not.
+ */
+.play-bar > * {
+  flex: 0 0 auto;
+}
+
 .play-id {
+  flex: 1 1 auto;
+  min-width: 0;
   display: grid;
   gap: 0.05rem;
+}
+
+.play-id > * {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .play-id b {
@@ -595,7 +619,10 @@ p {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  height: calc(100dvh - 1.5rem);
+  /* Inside the safe areas: the body is padded out of them (viewport-fit is
+     cover), and a height that ignored them ran the keypad off the bottom of
+     a notched phone playing from its home screen. */
+  height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow: hidden;
 }
 
@@ -1849,7 +1876,7 @@ p {
     grid-template-columns: minmax(0, 1fr) minmax(0, 17rem);
     grid-template-rows: auto minmax(0, 1fr);
     gap: 0.4rem 0.5rem;
-    height: calc(100dvh - 0.8rem);
+    height: calc(100dvh - 0.8rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 
   .play-bar {
@@ -1863,10 +1890,32 @@ p {
     grid-row: 2;
   }
 
-  .controls {
+  /*
+   * The strip goes beside the board on a phone held sideways too, under the
+   * controls, as it does on a desktop. Floated over the board it covered the
+   * bottom of a grid with no height to spare, while the column under the
+   * controls stood empty.
+   */
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
     grid-column: 2;
     grid-row: 2;
-    align-self: start;
+    min-height: 0;
+  }
+
+  .controls {
+    flex: 0 0 auto;
+  }
+
+  .side > .combos-wrap {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    background: var(--panel);
   }
 
   .key {
@@ -2116,5 +2165,128 @@ body.has-bg .board {
 
   body.has-bg .play .key {
     box-shadow: 3px 3px 0 var(--shadow);
+  }
+}
+
+/* ------------------------------------------------------ the menu on a phone */
+
+/*
+ * One screen, on a phone. The menu ran to 793px on a 664px phone — about what
+ * an iPhone shows with Safari's bars up — to 856 with a picture behind it,
+ * and to 906 on an iPhone SE, so the last belts and the Resume button were a
+ * scroll away. It tightens on any phone, and then gives things up in steps as
+ * the screen gets shorter: first the lines that only repeat what the ? beside
+ * each belt explains in full, then the title that the bar above already says.
+ */
+@media (max-width: 559px) {
+  #app:has(.menu) {
+    padding: 0.5rem;
+  }
+
+  .menu {
+    gap: 0.4rem;
+  }
+
+  .titlebar {
+    min-height: 2.5rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.65rem;
+  }
+
+  .titlebar .icon-button {
+    width: 2.15rem;
+    height: 2.15rem;
+  }
+
+  .hero {
+    padding: 0.35rem 0.1rem 0;
+  }
+
+  .hero .kicker {
+    margin-bottom: 0.35rem;
+  }
+
+  .hero h1 {
+    font-size: 1.85rem;
+  }
+
+  .hero p {
+    margin-top: 0.25rem;
+  }
+
+  .sizes {
+    margin-bottom: 0;
+  }
+
+  .sizes h2,
+  .levels h2 {
+    margin-bottom: 0.3rem;
+  }
+
+  .size-choice {
+    gap: 0.15rem;
+    padding: 0.35rem 0.2rem 0.3rem;
+  }
+
+  .size-glyph {
+    width: 1.45rem;
+    height: 1.45rem;
+  }
+
+  .level-play {
+    padding: 0.4rem 0.6rem;
+  }
+
+  .resume-open {
+    margin-top: 0.15rem;
+    padding: 0.6rem;
+  }
+
+  .hint-line {
+    margin-top: 0.15rem;
+  }
+
+  body.has-bg .menu > .hero,
+  body.has-bg .menu .sizes,
+  body.has-bg .menu-tail {
+    padding: 0.45rem 0.65rem;
+  }
+}
+
+/* Most phones with the browser's bars showing: the standfirst, each belt's
+   third line and the hint at the foot go. The ? on every belt says all of it. */
+@media (max-width: 559px) and (max-height: 780px) {
+  .hero p:not(.kicker),
+  .level-asks,
+  .hint-line {
+    display: none;
+  }
+}
+
+/* Shorter: a smaller title, the belt rows close up, and the build stamp goes. */
+@media (max-width: 559px) and (max-height: 680px) {
+  .hero h1 {
+    font-size: 1.55rem;
+  }
+
+  .levels {
+    gap: 4px;
+  }
+
+  .level-play {
+    padding: 0.32rem 0.55rem;
+  }
+
+  .menu-tail {
+    display: none;
+  }
+}
+
+/* The smallest phones: the bar already names the game, and the choices read
+   without their headings. */
+@media (max-width: 559px) and (max-height: 600px) {
+  .menu > .hero,
+  .sizes h2,
+  .levels > h2 {
+    display: none;
   }
 }

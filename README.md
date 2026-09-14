@@ -245,6 +245,26 @@ level row is a single button that starts a puzzle, and a button cannot sit
 inside a button, so the `?` has a cell of its own at the end of the row rather
 than inside the belt's lines as killer draws it.
 
+**On a phone, one screen.** The menu ran to 793px on a 664px phone — about
+what an iPhone shows with Safari's bars up — and to 856 with a picture behind
+it, so the last belts and the Resume button were a scroll away. It now tightens
+on any phone and gives things up in steps as the screen gets shorter: first the
+standfirst, each belt's third line and the hint, which the `?` on every belt
+explains in full; then the build stamp; on the smallest phones, the title the
+bar above already says. Measured with a picture behind it and unfinished games
+waiting, it fits at 390×664, 375×553 and 360×640.
+
+The top bar keeps its controls on any width: the puzzle's name is the part that
+gives way, trimming to an ellipsis before the ⋯ at the end can be pushed past
+the edge of a screen that clips what spills — checked with text set to 150%.
+The play screen's height also takes off the phone's safe areas: the body is
+padded out of them, and a height that ignored them ran the keypad off the
+bottom of a notched phone playing from its home screen.
+
+Held sideways, the combination strip moves into the column under the controls,
+as it sits on a desktop, instead of floating over the bottom of a board with no
+height to spare while that column stood empty.
+
 ## Boards and levels
 
 Two separate choices. **Size** is how long you want to be here; **level** is how

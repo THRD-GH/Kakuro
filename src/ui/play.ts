@@ -6,6 +6,7 @@ import { Game } from '../game/state.ts';
 import type { SavedGame } from '../game/storage.ts';
 import { dropSave, puzzleLink, putSave, recordFinish, recordStart, saveSettings } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
+import { fireworks } from './fireworks.ts';
 import {
   backIcon,
   checkIcon,
@@ -63,6 +64,8 @@ export class PlayScreen {
   private ticker: number | null = null;
   private saveTimer: number | null = null;
   private finished = false;
+  /** Stops a fireworks show still running when the screen goes. */
+  private stopFireworks: (() => void) | null = null;
 
   constructor(app: AppContext, id: PuzzleId, puzzle: Puzzle, save: SavedGame | null) {
     this.app = app;
@@ -502,7 +505,7 @@ export class PlayScreen {
     this.undoButton.disabled = !this.game.canUndo;
     this.redoButton.disabled = !this.game.canRedo;
     this.queueSave();
-    if (this.game.complete) this.win();
+    if (this.game.complete) this.win(true);
   }
 
   private move(dr: number, dc: number): void {
@@ -743,7 +746,12 @@ export class PlayScreen {
 
   // ------------------------------------------------------------------ finish
 
-  private win(): void {
+  /**
+   * `celebrate` is for the moment the last digit goes in. Opening a puzzle
+   * that was already finished comes through here as well, and gets the panel
+   * without the show.
+   */
+  private win(celebrate = false): void {
     if (this.finished) return;
     this.finished = true;
     this.game.pause();
@@ -766,7 +774,7 @@ export class PlayScreen {
         ? `Level ${filed}. The hardest thing it asked for was ${technique.toLowerCase()}.`
         : `Opened as level ${filed}, this grid played as level ${played}. The hardest thing it asked for was ${technique.toLowerCase()}.`;
 
-    openOverlay(
+    const shown = openOverlay(
       el(
         'div',
         { class: 'won' },
@@ -793,6 +801,10 @@ export class PlayScreen {
         ],
       },
     );
+
+    // The show stands on the Solved panel: the dojo on its top edge, the
+    // fireworks above it.
+    if (celebrate && this.app.settings.fireworks) this.stopFireworks = fireworks({ above: shown.querySelector('.panel') });
   }
 
   private openGameMenu(): void {
@@ -900,6 +912,8 @@ export class PlayScreen {
   }
 
   destroy(): void {
+    this.stopFireworks?.();
+    this.stopFireworks = null;
     this.barWatch?.disconnect();
     this.barWatch = null;
     this.wide.removeEventListener('change', this.replace);

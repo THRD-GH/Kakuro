@@ -45,6 +45,8 @@ export interface Settings {
   /** Hold a wake lock while a puzzle is open, so the screen stops dimming. */
   keepAwake: boolean;
   showTimer: boolean;
+  /** A few seconds of fireworks, above a dojo, when a puzzle is solved. */
+  fireworks: boolean;
   /**
    * Tools that want a hold rather than a tap. Check and Hint are counted
    * against the puzzle; Marks and Clear are guarded against a stray thumb.
@@ -70,6 +72,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showCombos: false,
   keepAwake: true,
   showTimer: true,
+  fireworks: true,
   checkNeedsHold: true,
   hintNeedsHold: false,
   marksNeedsHold: true,

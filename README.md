@@ -194,6 +194,21 @@ so neither gives anything away.
 Neither is coloured *ink*: a clue square is the one place on the board with no
 contrast to spare, and green digits on the dark clue squares could not be read.
 
+Solving a puzzle sets off a few seconds of fireworks above a dojo — the belts
+are judo's, so the celebration is too. The dojo is a line drawing in the
+theme's ink, standing on the top edge of the Solved panel, and the rockets go up
+from behind it and burst in the theme's own coral, blue, green and gold. It
+scales to the room above the panel, and where there is too little it leaves the
+dojo out. Settings can turn the show off, and it never plays when the device
+asks for reduced motion: the stylesheet stills CSS animation for that, but a
+canvas is drawn by script and has to check for itself. Reopening a puzzle that
+was already finished shows the panel without it, and leaving for the next
+puzzle stops a show that is still going.
+
+`src/ui/fireworks.ts` is written to be lifted into the other DanDoku games as it
+is: no imports, no stylesheet, colours from the house tokens every one of them
+defines, and the panel to stand on passed in.
+
 ## The look
 
 Kakuro wears the DanDoku house style, taken from killer-sudoku and Sudoku

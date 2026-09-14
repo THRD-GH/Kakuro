@@ -49,6 +49,11 @@ const TOGGLES: Toggle[] = [
   },
   { key: 'showTimer', title: 'Show the clock', detail: 'The clock keeps running either way. Tap it to hide it mid-puzzle.' },
   { key: 'keepAwake', title: 'Keep the screen on', detail: 'Stops the phone dimming and locking while a puzzle is open.' },
+  {
+    key: 'fireworks',
+    title: 'Fireworks when solved',
+    detail: 'A few seconds of them above a dojo as the last digit goes in. Never shown when the device asks for reduced motion.',
+  },
 ];
 
 const THEMES: { value: Theme; label: string }[] = [
@@ -262,7 +267,7 @@ export function openSettings(app: AppContext): void {
   const displayRows = [
     themeRow,
     backgroundRow,
-    ...rows(['highlightRuns', 'highlightSameDigit', 'showCombos', 'showTimer', 'keepAwake']),
+    ...rows(['highlightRuns', 'highlightSameDigit', 'showCombos', 'showTimer', 'keepAwake', 'fireworks']),
   ];
 
   let section: 'game' | 'display' = 'game';

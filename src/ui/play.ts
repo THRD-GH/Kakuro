@@ -18,12 +18,13 @@ import {
   redoIcon,
   tableIcon,
   undoIcon,
+  unzoomIcon,
   zoomIcon,
 } from './icons.ts';
 import { Board } from './board.ts';
 import { CombosBar, fillCandidates } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
-import { bindPan, bindTap } from './pointer.ts';
+import { DOUBLE_MS, bindPan, bindTap } from './pointer.ts';
 import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
 
 export class PlayScreen {
@@ -42,6 +43,8 @@ export class PlayScreen {
   private hintNote: HTMLElement;
 
   private zoomed = false;
+  /** The last digit typed on a keyboard, to tell a double press from two presses. */
+  private lastDigitKey: { digit: number; cell: number; at: number } | null = null;
   /**
    * The layouts that put the controls beside the board, matching the
    * stylesheet's two queries: a wide screen, or a phone on its side. In both,
@@ -405,6 +408,12 @@ export class PlayScreen {
     this.zoomed = on;
     this.zoomButton.setAttribute('aria-pressed', String(on));
     this.zoomButton.classList.toggle('on', on);
+    // The arrows show what the next press does: pointing apart to zoom in,
+    // turned inward once zoomed, to come back out.
+    clear(this.zoomButton);
+    this.zoomButton.append(on ? unzoomIcon() : zoomIcon());
+    this.zoomButton.setAttribute('aria-label', on ? 'Zoom out' : 'Zoom in');
+    this.zoomButton.title = on ? 'Zoom out' : 'Zoom in';
     this.node.querySelector('.board-wrap')?.classList.toggle('zoomed', on);
     if (this.board.selection >= 0) this.board.select(this.board.selection);
   }
@@ -499,11 +508,39 @@ export class PlayScreen {
     const key = e.key;
 
     if (key >= '1' && key <= '9') {
-      if (e.shiftKey) this.force(Number(key));
-      else this.tap(Number(key));
       e.preventDefault();
+      // A key held down repeats itself; a repeat is not a second press, and
+      // taking each one as a toggle made the digit flicker in and out.
+      if (e.repeat) return;
+      const digit = Number(key);
+      if (e.shiftKey) {
+        this.lastDigitKey = null;
+        this.force(digit);
+        return;
+      }
+      /*
+       * A quick second press of the same digit on the same cell forces it in,
+       * as a double-tap on the keypad does — within the keypad's own window,
+       * so the two cannot drift apart. The first press has already been taken
+       * as a toggle, exactly as the first tap is, and forcing settles the cell
+       * whatever that toggle did.
+       */
+      const now = performance.now();
+      const cell = this.board.selection;
+      const last = this.lastDigitKey;
+      if (last && last.digit === digit && last.cell === cell && now - last.at < DOUBLE_MS) {
+        this.lastDigitKey = null;
+        this.force(digit);
+        return;
+      }
+      this.lastDigitKey = { digit, cell, at: now };
+      this.tap(digit);
       return;
     }
+
+    // Anything pressed in between — a move, a rub-out, an undo — makes the
+    // next press of a digit a fresh one.
+    this.lastDigitKey = null;
 
     switch (key) {
       case 'ArrowUp':

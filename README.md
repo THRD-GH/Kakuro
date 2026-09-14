@@ -39,7 +39,7 @@ why there is no Notes mode.
 | Long-click Clear | Empty the cell |
 | Marks | Pencil in what is possible in every cell — no further |
 
-Keyboard: arrows move, `1`–`9` toggle, `Shift`+digit forces, `Delete` or
+Keyboard: arrows move, `1`–`9` toggle, `Shift`+digit or a quick double press forces, `Delete` or
 `Backspace` clears, `M` fills the marks, `Z` undoes, `Y` redoes. When Check or
 Hint is set to need a hold, the matching keys are `Shift+C` and `Shift+H`.
 
@@ -96,6 +96,8 @@ rest of both runs — a tap is far too easy to make by accident to let it change
 anything outside its own cell.
 
 **Zoom** trades fitting the board on screen for cells you can actually hit.
+Its arrows show what the next press does: pointing apart to zoom in, turned
+inward once zoomed, to come back out.
 Fitted to a phone, a 20×20 gives each cell about fifteen pixels: the answers
 survive that but a two-figure clue in half of one does not, and it is well
 under the size a thumb can hit. Large and Huge boards therefore open zoomed on

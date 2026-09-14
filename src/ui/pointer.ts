@@ -37,7 +37,7 @@ export interface TapOptions {
 
 const HOLD_MS = 450;
 /** Two taps closer together than this are one double-tap. */
-const DOUBLE_MS = 400;
+export const DOUBLE_MS = 400;
 /** How far a finger may slide and still count as a tap, in CSS pixels. */
 const DRIFT_PX = 10;
 

@@ -150,3 +150,12 @@ export const settingsIcon = (): SVGSVGElement =>
     ['path', { ...line, 'stroke-width': '1.4', d: COG }],
     ['circle', { ...line, 'stroke-width': '1.4', cx: '8', cy: '8', r: '2.1' }],
   );
+
+/** The zoom arrows turned inward: zoomed in, the next press comes back out. */
+export const unzoomIcon = (): SVGSVGElement =>
+  icon(
+    ['polyline', { ...line, points: '9.25 3.25 9.25 6.75 12.75 6.75' }],
+    ['line', { ...line, x1: '13.25', y1: '2.75', x2: '9.25', y2: '6.75' }],
+    ['polyline', { ...line, points: '6.75 12.75 6.75 9.25 3.25 9.25' }],
+    ['line', { ...line, x1: '2.75', y1: '13.25', x2: '6.75', y2: '9.25' }],
+  );

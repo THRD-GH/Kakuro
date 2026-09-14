@@ -1,10 +1,10 @@
 import type { Settings, Theme } from '../game/storage.ts';
-import { saveSettings } from '../game/storage.ts';
+import { POOL_SIZES, exportBackup, importBackup, saveSettings } from '../game/storage.ts';
 import type { AppContext } from './app-context.ts';
 import { BACKGROUNDS, customPhoto, forgetPhoto, keepPhoto } from './backgrounds.ts';
 import { previewFireworks } from './celebration.ts';
 import { clear, el } from './dom.ts';
-import { openOverlay, toast } from './overlay.ts';
+import { confirmPanel, openOverlay, toast } from './overlay.ts';
 
 /** Only the on/off settings are switches. */
 type BooleanSetting = {
@@ -276,7 +276,29 @@ export function openSettings(app: AppContext): void {
       return toggleRow(toggle);
     });
 
-  const gameRows = rows(['allowSingleMark', 'autoRemoveMarks', 'instantCheck', 'checkNeedsHold', 'hintNeedsHold', 'marksNeedsHold', 'clearNeedsHold']);
+  /*
+   * Puzzles per belt, first under Game as killer-sudoku has it. Every grid is
+   * made from its number, so a bigger pool adds grids and changes none.
+   */
+  const poolRow = stacked(
+    'Puzzles per belt',
+    'How many numbered grids each board and belt offers. The same number always makes the same grid, so a bigger pool is more puzzles, not different ones.',
+    picker(
+      POOL_SIZES.map((n) => ({ value: String(n), label: n.toLocaleString('en-GB') })),
+      () => String(app.settings.poolSize),
+      (size) => {
+        app.settings.poolSize = Number(size);
+        saveSettings(app.settings);
+        // The menu behind this panel is counting what is left.
+        app.refreshMenu();
+      },
+    ),
+  );
+
+  const gameRows = [
+    poolRow,
+    ...rows(['allowSingleMark', 'autoRemoveMarks', 'instantCheck', 'checkNeedsHold', 'hintNeedsHold', 'marksNeedsHold', 'clearNeedsHold']),
+  ];
   const displayRows = [
     themeRow,
     backgroundRow,
@@ -303,7 +325,57 @@ export function openSettings(app: AppContext): void {
   );
   drawList();
 
-  openOverlay(el('div', { class: 'settings' }, el('div', { class: 'section-tabs' }, sections), list), {
+  /*
+   * Your data, as the other DanDoku games have it: below both sections,
+   * because a backup tucked inside one tab is a backup that never gets made.
+   */
+  const exportData = el('button', { type: 'button', text: 'Export data' });
+  exportData.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(exportBackup(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    el('a', { href: url, download: 'kakuro-backup.json' }).click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Backup downloaded.');
+  });
+
+  const file = el('input', { type: 'file', accept: 'application/json,.json' });
+  file.hidden = true;
+  file.addEventListener('change', () => {
+    const chosen = file.files?.[0];
+    file.value = '';
+    if (!chosen) return;
+    void chosen
+      .text()
+      .then((text) => {
+        const restored = importBackup(JSON.parse(text) as unknown);
+        // Settings closes on the way back to the menu.
+        app.reload();
+        toast(
+          restored.settingsOnly
+            ? 'Settings restored. That backup is from an older set of puzzles, so its history and games were left out.'
+            : `Restored ${restored.history} puzzles and ${restored.saves} games.`,
+        );
+      })
+      .catch((err: unknown) => toast(err instanceof Error ? err.message : 'Could not read that file.'));
+  });
+
+  const importData = el('button', { type: 'button', text: 'Import data' });
+  importData.addEventListener('click', () =>
+    confirmPanel(
+      'Replace your data with a backup?',
+      'Your history, settings and unfinished games here are replaced by the ones in the file.',
+      'Choose file',
+      () => file.click(),
+    ),
+  );
+
+  const dataRow = stacked(
+    'Your data',
+    'History, settings and unfinished games as a file you keep. The background photo stays on this device.',
+    el('div', { class: 'tabs' }, exportData, importData, file),
+  );
+
+  openOverlay(el('div', { class: 'settings' }, el('div', { class: 'section-tabs' }, sections), list, dataRow), {
     title: 'Settings',
     actions: [{ label: 'Done', primary: true }],
   });

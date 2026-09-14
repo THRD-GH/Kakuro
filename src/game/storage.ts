@@ -24,12 +24,22 @@ const KEY = {
  */
 export const POOL_SIZE = 500;
 
+/**
+ * The pool sizes on offer, as killer-sudoku offers them. Every grid is
+ * generated from its number, so a bigger pool is more puzzles, not different
+ * ones: the bound only says how far "left" counts and how high a random pick
+ * reaches.
+ */
+export const POOL_SIZES = [500, 1000, 2500, 5000] as const;
+
 export type Theme = 'night' | 'day' | 'contrast';
 
 export interface Settings {
   theme: Theme;
   /** The board last chosen on the menu, so it is still there next time. */
   size: Size;
+  /** How many numbered grids each board and belt offers: one of POOL_SIZES. */
+  poolSize: number;
   /** Tint the across and down runs through the selected cell. */
   highlightRuns: boolean;
   /** Tint other cells holding the same digit. */
@@ -64,6 +74,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'day',
   size: 12,
+  poolSize: POOL_SIZE,
   highlightRuns: true,
   highlightSameDigit: true,
   allowSingleMark: false,
@@ -135,6 +146,9 @@ export function loadSettings(): Settings {
   const dim = Number(stored.backgroundDim);
   stored.backgroundDim = Number.isFinite(dim) ? Math.min(1, Math.max(0, dim)) : DEFAULT_SETTINGS.backgroundDim;
   if (typeof stored.background !== 'string') stored.background = DEFAULT_SETTINGS.background;
+  // Only the sizes on offer: an edited store could otherwise make the menu
+  // count to a million, or to nothing.
+  if (!(POOL_SIZES as readonly number[]).includes(stored.poolSize)) stored.poolSize = DEFAULT_SETTINGS.poolSize;
   return stored;
 }
 
@@ -338,6 +352,98 @@ export function dropSave(id: PuzzleId): void {
   const table = loadSaves();
   delete table[historyKey(id)];
   write(KEY.save, table);
+}
+
+// -------------------------------------------------------------------- backup
+
+/*
+ * Your data as a file you keep, in the same shape as the other DanDoku games'
+ * backups. Everything lives in localStorage, which a browser can clear without
+ * warning, so a file is the only real protection for a long history.
+ *
+ * Kakuro's differs in one field. Its grids are generated from their numbers,
+ * and a new generator turns every number into a different grid — which is why
+ * retireGeneratedPuzzles clears history and saves when the generator changes.
+ * A backup records the generator it was made under, and one from another
+ * generator brings back its settings only: its history and saves name grids
+ * that no longer exist.
+ *
+ * The background photo is not in it — it stays on the device it was chosen on
+ * — and neither is the puzzle cache, which is rebuilt as puzzles are played.
+ */
+
+export interface Backup {
+  app: 'kakuro';
+  version: 1;
+  exportedAt: string;
+  /** The generator the history and saves were made under. */
+  generator: number;
+  settings: Settings;
+  history: History;
+  saves: SavedGame[];
+}
+
+/** Everything worth keeping, in one object. */
+export function exportBackup(): Backup {
+  return {
+    app: 'kakuro',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    generator: GENERATOR_VERSION,
+    settings: loadSettings(),
+    history: loadHistory(),
+    saves: Object.values(loadSaves()),
+  };
+}
+
+export interface Restored {
+  history: number;
+  saves: number;
+  /** True when the backup came from another generator and only its settings were taken. */
+  settingsOnly: boolean;
+}
+
+/**
+ * Restore a backup, replacing what is here. Checked in full before anything is
+ * written, so a wrong or damaged file cannot leave storage half-overwritten.
+ */
+export function importBackup(raw: unknown): Restored {
+  const data = raw as Partial<Backup> | null;
+  if (!data || typeof data !== 'object' || data.app !== 'kakuro' || data.version !== 1) {
+    throw new Error('That is not a Kakuro backup.');
+  }
+  if (typeof data.history !== 'object' || data.history === null || Array.isArray(data.history)) {
+    throw new Error('That backup is damaged.');
+  }
+  const saves = Array.isArray(data.saves) ? data.saves : [];
+  for (const save of saves) {
+    const cells = save?.puzzle?.size * save?.puzzle?.size;
+    const whole =
+      filedAs(save) !== null &&
+      Array.isArray(save.puzzle?.solution) &&
+      save.puzzle.solution.length === cells &&
+      Array.isArray(save.values) &&
+      save.values.length === cells &&
+      Array.isArray(save.marks) &&
+      save.marks.length === cells;
+    if (!whole) throw new Error('That backup has a damaged saved game.');
+  }
+
+  const settings = { ...DEFAULT_SETTINGS, ...(data.settings ?? {}) };
+  write(KEY.settings, settings);
+  if (data.generator !== GENERATOR_VERSION) {
+    return { history: 0, saves: 0, settingsOnly: true };
+  }
+
+  const table: SaveTable = {};
+  const newest = [...saves].sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0)).slice(0, MAX_SAVES);
+  for (const save of newest) {
+    const id = filedAs(save);
+    if (id) table[formatPuzzleId(id)] = { ...save, id };
+  }
+  write(KEY.history, data.history);
+  write(KEY.save, table);
+  return { history: Object.keys(data.history).length, saves: Object.keys(table).length, settingsOnly: false };
 }
 
 // --------------------------------------------------------------------- cache

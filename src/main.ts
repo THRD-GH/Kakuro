@@ -5,7 +5,6 @@ import { getPuzzle, prefetch } from './game/generate.ts';
 import { registerServiceWorker, setThemeColour } from './game/pwa.ts';
 import { keepScreenAwake } from './game/wakelock.ts';
 import {
-  POOL_SIZE,
   clearPuzzleLink,
   linkedPuzzle,
   loadHistory,
@@ -44,7 +43,9 @@ const forgotten = retireGeneratedPuzzles();
 class App implements AppContext {
   settings: Settings = loadSettings();
   history: History = loadHistory();
-  readonly poolSize = POOL_SIZE;
+  get poolSize(): number {
+    return this.settings.poolSize;
+  }
 
   private root: HTMLElement;
   private play: PlayScreen | null = null;
@@ -101,6 +102,25 @@ class App implements AppContext {
   }
 
   // ------------------------------------------------------------------ screens
+
+  /*
+   * Redraws the menu without closing anything. goMenu closes every panel on
+   * its way, which is right for a Menu button and wrong for a setting changed
+   * inside Settings: the panel would shut under the finger that changed it.
+   */
+  refreshMenu(): void {
+    if (!this.onMenu || this.play !== null) return;
+    clear(this.root);
+    this.root.append(buildMenu(this));
+  }
+
+  reload(): void {
+    this.settings = loadSettings();
+    this.history = loadHistory();
+    this.applyTheme();
+    this.applyBackground();
+    this.goMenu();
+  }
 
   goMenu(): void {
     closeAllOverlays();

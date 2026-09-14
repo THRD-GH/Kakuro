@@ -5,8 +5,8 @@ import type { History, Settings } from '../game/storage.ts';
 export interface AppContext {
   settings: Settings;
   history: History;
-  /** How many puzzles each board and level is numbered up to. */
-  poolSize: number;
+  /** How many puzzles each board and level is numbered up to: the setting, read live. */
+  readonly poolSize: number;
   /** The board currently chosen on the menu. */
   size: Size;
   setSize(size: Size): void;
@@ -18,6 +18,10 @@ export interface AppContext {
   /** Repaint the board in place, after a highlighting setting changes. */
   refreshBoard(): void;
   goMenu(): void;
+  /** Redraw the menu behind an open panel, after a setting it shows has changed. */
+  refreshMenu(): void;
+  /** Read settings and history back from storage after a backup is restored, and start again from the menu. */
+  reload(): void;
   openHelp(): void;
   openSettings(): void;
   playPuzzle(id: PuzzleId): void;

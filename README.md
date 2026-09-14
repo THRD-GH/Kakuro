@@ -232,6 +232,22 @@ for reduced motion the panel says why there is nothing to see.
 is: no imports, no stylesheet, the dojo's colours from the house tokens every
 one of them defines, and the panel to stand on passed in.
 
+## Your data and the pool
+
+Settings ends with **Your data**, as the other DanDoku games do: Export data
+downloads `kakuro-backup.json` with your history, settings and unfinished games,
+and Import data replaces them from one, after asking. The file is checked in
+full before anything is written, so a wrong or damaged one leaves everything as
+it was. It records the generator its puzzles came from; a backup from an older
+generator brings back its settings only, because its history and games name
+grids that no longer exist. The background photo stays on the device it was
+chosen on.
+
+**Puzzles per belt**, first under Game, sets how many numbered grids each board
+and belt offers: 500, 1,000, 2,500 or 5,000, as killer-sudoku offers. Every grid
+is generated from its number, so a bigger pool is more puzzles rather than
+different ones, and the menu's counts of what is left follow it as it changes.
+
 ## The look
 
 Kakuro wears the DanDoku house style, taken from killer-sudoku and Sudoku

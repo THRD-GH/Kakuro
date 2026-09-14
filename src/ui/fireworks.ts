@@ -3,9 +3,9 @@
  *
  * Self-contained on purpose — no imports, no stylesheet, nothing Kakuro-shaped
  * — so the other DanDoku games can take the file as it is. It styles its own
- * canvases, takes the dojo's ink and paper from the house tokens every one of
- * them defines, and the one thing it needs from the page, the panel to stand
- * on, is passed in.
+ * canvases, takes the dojo's colours from the house tokens every one of them
+ * defines, and the one thing it needs from the page, the panel to stand on, is
+ * passed in.
  *
  * Three layers, all gone when the show is: a night sky, darkened so the colours
  * read over anything, even a board of dark clue squares; the canvas where the
@@ -424,10 +424,11 @@ function burst(particles: Particle[], flashes: Flash[], rocket: Rocket): void {
 /**
  * The dojo, in units of its own width: x from -0.5 to 0.5 across it, y rising
  * from its base as it goes negative. Each solid part is filled on its own —
- * overlapping sub-paths wound opposite ways would cancel under one fill — and
- * everything is then drawn over in ink.
+ * overlapping sub-paths wound opposite ways would cancel under one fill — the
+ * walls in paper, the roofs in a wash, the curtain in coral, and everything is
+ * then drawn over in ink.
  */
-function dojoShapes(): { solids: Path2D[]; lines: Path2D } {
+function dojoShapes(): { walls: Path2D[]; roofs: Path2D[]; curtain: Path2D; lines: Path2D } {
   const lines = new Path2D();
 
   // The stone plinth it stands on, with a step at the front.
@@ -447,6 +448,15 @@ function dojoShapes(): { solids: Path2D[]; lines: Path2D } {
   }
   lines.moveTo(-0.33, -0.215);
   lines.lineTo(0.33, -0.215);
+
+  // A curtain hung from the beam across the doorway, between the middle posts,
+  // split into three the way a noren is.
+  const curtain = new Path2D();
+  curtain.rect(-0.09, -0.215, 0.18, 0.065);
+  for (const x of [-0.03, 0.03]) {
+    lines.moveTo(x, -0.19);
+    lines.lineTo(x, -0.15);
+  }
 
   // The lower roof, its eaves sagging in the middle and sweeping up at the corners.
   const lowerRoof = new Path2D();
@@ -486,20 +496,33 @@ function dojoShapes(): { solids: Path2D[]; lines: Path2D } {
   lines.moveTo(0.15, -0.585);
   lines.lineTo(0.185, -0.62);
 
-  return { solids: [plinth, hall, lowerRoof, band, upperRoof], lines };
+  return { walls: [plinth, hall, band], roofs: [lowerRoof, upperRoof], curtain, lines };
+}
+
+interface DojoColours {
+  ink: string;
+  /** The walls, so the drawing reads over whatever the shade has dimmed. */
+  paper: string;
+  /** A wash over the roofs: slate tiles rather than more paper. */
+  roof: string;
+  /** The curtain in the doorway, the one warm spot on the building. */
+  curtain: string;
 }
 
 /** Draws the dojo into a context already scaled to its width and moved to its base. */
-function drawDojo(context: CanvasRenderingContext2D, w: number, ink: string, paper: string): void {
-  const { solids, lines } = dojoShapes();
-  // Paper under the ink, so the drawing reads over whatever the shade has dimmed.
-  context.fillStyle = paper;
-  for (const part of solids) context.fill(part);
-  context.strokeStyle = ink;
+function drawDojo(context: CanvasRenderingContext2D, w: number, colours: DojoColours): void {
+  const { walls, roofs, curtain, lines } = dojoShapes();
+  context.fillStyle = colours.paper;
+  for (const part of walls) context.fill(part);
+  context.fillStyle = colours.roof;
+  for (const part of roofs) context.fill(part);
+  context.fillStyle = colours.curtain;
+  context.fill(curtain);
+  context.strokeStyle = colours.ink;
   context.lineWidth = Math.max(1.5, w * 0.0065) / w;
   context.lineJoin = 'round';
   context.lineCap = 'round';
-  for (const part of solids) context.stroke(part);
+  for (const part of [...walls, ...roofs, curtain]) context.stroke(part);
   context.stroke(lines);
 }
 
@@ -543,11 +566,9 @@ export function fireworks(options: FireworksOptions = {}): () => void {
     const edge = Math.round(((scene.dojo ? scene.dojo.base : height * 0.6) / height) * 100);
     mount(
       night,
-      `inset:0;opacity:0;transition:opacity ${SKY_FADE_MS}ms ease;` +
+      `inset:0;opacity:0;` +
         `background:linear-gradient(to bottom, rgba(${NIGHT}, 0.9) 0%, rgba(${NIGHT}, 0.8) ${edge}%, rgba(${NIGHT}, 0.4) 100%)`,
     );
-    void night.offsetWidth;
-    night.style.opacity = '1';
   }
 
   sky.width = Math.round(width * ratio);
@@ -571,16 +592,19 @@ export function fireworks(options: FireworksOptions = {}): () => void {
       canvas.className = 'fireworks-dojo';
       mount(
         canvas,
-        `left:${cx - w * 0.56}px;top:${base - w * 0.66}px;width:${w * 1.12}px;height:${w * 0.68}px;` +
-          `opacity:0;transition:opacity ${DOJO_FADE_MS}ms ease`,
+        `left:${cx - w * 0.56}px;top:${base - w * 0.66}px;width:${w * 1.12}px;height:${w * 0.68}px;opacity:0`,
       );
       pen.scale(ratio, ratio);
       pen.translate(w * 0.56, w * 0.66);
       pen.scale(w, w);
-      drawDojo(pen, w, token('--text', '#17273d'), token('--panel', '#fffdfa'));
-      // Read back once, so the fade has a starting point to run from.
-      void canvas.offsetWidth;
-      canvas.style.opacity = '1';
+      // In the theme's own colours, with the accent's pale wash on the roofs
+      // and the house coral in the doorway.
+      drawDojo(pen, w, {
+        ink: token('--text', '#17273d'),
+        paper: token('--panel', '#fffdfa'),
+        roof: token('--accent-dim', '#dbe8ee'),
+        curtain: token('--coral', '#f06951'),
+      });
       dojo = canvas;
     }
   }
@@ -591,7 +615,8 @@ export function fireworks(options: FireworksOptions = {}): () => void {
 
   let frame = 0;
   let deadline = 0;
-  let ending = 0;
+  /** When the last spark went out and the dojo and sky began to fade; null until then. */
+  let fadingSince: number | null = null;
   const start = performance.now();
   let last = start;
 
@@ -603,7 +628,6 @@ export function fireworks(options: FireworksOptions = {}): () => void {
   const stop = (): void => {
     cancelAnimationFrame(frame);
     window.clearTimeout(deadline);
-    window.clearTimeout(ending);
     remove();
   };
 
@@ -612,6 +636,17 @@ export function fireworks(options: FireworksOptions = {}): () => void {
     const dt = Math.min(Math.max(now - last, 0), MAX_STEP_MS);
     last = now;
     const elapsed = now - start;
+
+    /*
+     * The dojo and the sky fade in and out on the show's own clock, set here
+     * every frame. They were CSS transitions, and a transition runs on a clock
+     * of its own: measured with the page on screen, both were still at nothing
+     * 0.7s in and at 7% after 1.5s, so the building stood half there through
+     * most of the show and the sky never darkened enough to matter.
+     */
+    const out = fadingSince === null ? 0 : now - fadingSince;
+    if (dojo) dojo.style.opacity = String(Math.max(0, Math.min(1, elapsed / DOJO_FADE_MS) - out / DOJO_FADE_MS));
+    if (night) night.style.opacity = String(Math.max(0, Math.min(1, elapsed / SKY_FADE_MS) - out / SKY_FADE_MS));
 
     // Rub out some of the last frame rather than all of it: that is the trails.
     context.globalCompositeOperation = 'destination-out';
@@ -743,17 +778,17 @@ export function fireworks(options: FireworksOptions = {}): () => void {
     context.globalAlpha = 1;
 
     if (!waiting && particles.length === 0 && flashes.length === 0) {
-      // Over: the last of the glow goes at once, and the dojo and the sky fade out after it.
-      context.clearRect(0, 0, width, height);
-      window.clearTimeout(deadline);
-      if (dojo || night) {
-        if (dojo) dojo.style.opacity = '0';
-        if (night) night.style.opacity = '0';
-        ending = window.setTimeout(remove, Math.max(DOJO_FADE_MS, SKY_FADE_MS) + 60);
-      } else {
-        remove();
+      // Over: the last of the glow goes at once, and the dojo and the sky fade
+      // out after it, a frame at a time, before everything is taken away.
+      if (fadingSince === null) {
+        context.clearRect(0, 0, width, height);
+        fadingSince = now;
       }
-      return;
+      if ((!dojo && !night) || now - fadingSince >= Math.max(DOJO_FADE_MS, SKY_FADE_MS)) {
+        window.clearTimeout(deadline);
+        remove();
+        return;
+      }
     }
     frame = requestAnimationFrame(step);
   };

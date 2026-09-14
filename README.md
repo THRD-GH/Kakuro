@@ -196,8 +196,10 @@ contrast to spare, and green digits on the dark clue squares could not be read.
 
 Solving a puzzle puts on about eight seconds of fireworks above a dojo — the
 belts are judo's, so the celebration is too. The dojo is a line drawing in the
-theme's ink, standing on the top edge of the Solved panel. Rockets go up from
-behind it trailing embers and burst in four kinds of shell — a two-tone peony, a
+theme's ink on the panel's paper, with a hint of the house colours: its roofs
+washed in the accent's pale blue, like slate, and a curtain of the house coral
+across the doorway. It stands on the top edge of the Solved panel. Rockets go up
+from behind it trailing embers and burst in four kinds of shell — a two-tone peony, a
 crackle that breaks into white specks, a tilted ring with a glittering heart,
 and a gold willow that droops — before a finale of four at once. Every spark
 glows and leaves a trail, each burst opens with a flash, and the show goes in
@@ -223,8 +225,8 @@ not the switch is on, since seeing it is how to decide; on a device that asks
 for reduced motion the panel says why there is nothing to see.
 
 `src/ui/fireworks.ts` is written to be lifted into the other DanDoku games as it
-is: no imports, no stylesheet, the dojo's ink and paper from the house tokens
-every one of them defines, and the panel to stand on passed in.
+is: no imports, no stylesheet, the dojo's colours from the house tokens every
+one of them defines, and the panel to stand on passed in.
 
 ## The look
 

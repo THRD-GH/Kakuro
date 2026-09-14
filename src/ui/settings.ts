@@ -319,40 +319,9 @@ export function openSettings(app: AppContext): void {
     ),
   );
 
-  const gameRows = [
-    poolRow,
-    ...rows(['allowSingleMark', 'autoRemoveMarks', 'instantCheck', 'checkNeedsHold', 'hintNeedsHold', 'marksNeedsHold', 'clearNeedsHold', 'undoNeedsHold']),
-  ];
-  const displayRows = [
-    themeRow,
-    backgroundRow,
-    keypadRow,
-    ...rows(['highlightRuns', 'highlightSameDigit', 'showCombos', 'showTimer', 'keepAwake', 'fireworks']),
-    fireworksRow,
-  ];
-
-  let section: 'game' | 'display' = 'game';
-  const list = el('div', { class: 'settings-rows' });
-  const drawList = (): void => {
-    clear(list);
-    list.append(...(section === 'game' ? gameRows : displayRows));
-  };
-  const sections = picker(
-    [
-      { value: 'game', label: 'Game' },
-      { value: 'display', label: 'Display' },
-    ],
-    () => section,
-    (value) => {
-      section = value;
-      drawList();
-    },
-  );
-  drawList();
-
   /*
-   * Your data, as the other DanDoku games have it: below both sections,
-   * because a backup tucked inside one tab is a backup that never gets made.
+   * Your data, at the foot of the Game tab. killer-sudoku puts it under both
+   * sections; here it stays off Display, which is about how the game looks.
    */
   const exportData = el('button', { type: 'button', text: 'Export data' });
   exportData.addEventListener('click', () => {
@@ -400,7 +369,39 @@ export function openSettings(app: AppContext): void {
     el('div', { class: 'tabs' }, exportData, importData, file),
   );
 
-  openOverlay(el('div', { class: 'settings' }, el('div', { class: 'section-tabs' }, sections), list, dataRow), {
+  const gameRows = [
+    poolRow,
+    ...rows(['allowSingleMark', 'autoRemoveMarks', 'instantCheck', 'checkNeedsHold', 'hintNeedsHold', 'marksNeedsHold', 'clearNeedsHold', 'undoNeedsHold']),
+    dataRow,
+  ];
+  const displayRows = [
+    themeRow,
+    backgroundRow,
+    keypadRow,
+    ...rows(['highlightRuns', 'highlightSameDigit', 'showCombos', 'showTimer', 'keepAwake', 'fireworks']),
+    fireworksRow,
+  ];
+
+  let section: 'game' | 'display' = 'game';
+  const list = el('div', { class: 'settings-rows' });
+  const drawList = (): void => {
+    clear(list);
+    list.append(...(section === 'game' ? gameRows : displayRows));
+  };
+  const sections = picker(
+    [
+      { value: 'game', label: 'Game' },
+      { value: 'display', label: 'Display' },
+    ],
+    () => section,
+    (value) => {
+      section = value;
+      drawList();
+    },
+  );
+  drawList();
+
+  openOverlay(el('div', { class: 'settings' }, el('div', { class: 'section-tabs' }, sections), list), {
     title: 'Settings',
     actions: [{ label: 'Done', primary: true }],
   });

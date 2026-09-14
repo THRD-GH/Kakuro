@@ -241,8 +241,9 @@ one of them defines, and the panel to stand on passed in.
 
 ## Your data and the pool
 
-Settings ends with **Your data**, as the other DanDoku games do: Export data
-downloads `kakuro-backup.json` with your history, settings and unfinished games,
+The Game tab of Settings ends with **Your data**, as in the other DanDoku games,
+though it is left off Display: Export data downloads `kakuro-backup.json` with
+your history, settings and unfinished games,
 and Import data replaces them from one, after asking. The file is checked in
 full before anything is written, so a wrong or damaged one leaves everything as
 it was. It records the generator its puzzles came from; a backup from an older

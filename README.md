@@ -121,6 +121,17 @@ scrollbar and the combination bar floats over exactly where that lives. The
 bar also reserves its own height under the board, so the bottom row can always
 be scrolled clear of it.
 
+On a phone the table floats over the foot of the board, and the foot of the
+board is where the last rows are played: behind the table they could not be
+played at all, and on a board that already fits its pane there is nothing to
+scroll them clear with. So the table dodges. When the cell being played is
+where it sits, it hops to the top of the board and stays there until the play
+moves back up — the board never gives up a pixel for it, which on a 16×16 is
+the scarce thing. It goes by where the cell is in the pane rather than which
+row it is, because a zoomed board scrolls and the bottom row of the grid is not
+the bottom of the view; and a tie keeps the side it is on, so a cursor crossing
+the middle does not send it flapping from end to end.
+
 The key's arrows show what the next press does: pointing apart to zoom in,
 turned inward once zoomed, to come back out. Zooming in never makes the board
 smaller — zoomed, a cell is the size a thumb can hit or half as big again as it

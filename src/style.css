@@ -734,6 +734,12 @@ p {
   padding-bottom: var(--bar-h, 0px);
 }
 
+/* Up at the top, the room to scroll clear of it goes to the top with it. */
+.board-area.combos-high .board-wrap.zoomed {
+  padding-top: var(--bar-h, 0px);
+  padding-bottom: 0;
+}
+
 .board-wrap.zoomed.panning {
   cursor: grabbing;
   user-select: none;
@@ -937,6 +943,18 @@ p {
 
 .board-overlays > * {
   pointer-events: auto;
+}
+
+/*
+ * The table dodges; the board never gives up a pixel for it. Under the board
+ * is where it belongs, but the last rows are played down there too, and on a
+ * board that already fits its pane there is nothing to scroll them clear with.
+ * play.ts puts this on the area when the cell being played is where the table
+ * sits, and takes it off when the play moves back up.
+ */
+.board-area.combos-high .board-overlays {
+  top: 0;
+  bottom: auto;
 }
 
 

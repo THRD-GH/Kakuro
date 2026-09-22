@@ -8,7 +8,7 @@ import { dealableCombos } from '../src/core/combos.ts';
 import { generatePuzzle } from '../src/core/generator.ts';
 import { Game } from '../src/game/state.ts';
 import { combosFor } from '../src/core/combos.ts';
-import { fillCandidates, runState } from '../src/ui/combos.ts';
+import { dodgeSide, fillCandidates, runState } from '../src/ui/combos.ts';
 
 const id = { size: 9, level: 1, number: 1 } as const;
 const puzzle = generatePuzzle(id);
@@ -183,4 +183,31 @@ test('Marks offers what the rules allow and stops there', () => {
       `cell ${cell}: offered ${digitsOf(actual[cell]).join('')}, rules allow ${digitsOf(expected[cell]).join('')}`,
     );
   }
+});
+
+// ------------------------------------------------------------ table dodging
+
+// A pane 600 tall, and a table that takes a quarter of it.
+const view = { top: 0, bottom: 600 };
+
+test('the table stays where it is while the play is clear of both ends', () => {
+  assert.equal(dodgeSide('bottom', view, { top: 250, bottom: 290 }, 150), 'bottom');
+  assert.equal(dodgeSide('top', view, { top: 250, bottom: 290 }, 150), 'top');
+});
+
+test('a cell behind the table sends the table to the other end', () => {
+  assert.equal(dodgeSide('bottom', view, { top: 500, bottom: 540 }, 150), 'top');
+  assert.equal(dodgeSide('top', view, { top: 20, bottom: 60 }, 150), 'bottom');
+});
+
+test('a table too tall to clear takes the end that covers less', () => {
+  // 340 of a 600 pane: the cell is behind it either way, and the top covers less.
+  assert.equal(dodgeSide('bottom', view, { top: 300, bottom: 340 }, 340), 'top');
+  // Dead even, so it stays put rather than hopping for nothing.
+  assert.equal(dodgeSide('top', view, { top: 280, bottom: 320 }, 340), 'top');
+});
+
+test('a folded table, or no cell, leaves it where it is', () => {
+  assert.equal(dodgeSide('bottom', view, null, 150), 'bottom');
+  assert.equal(dodgeSide('top', view, { top: 500, bottom: 540 }, 0), 'top');
 });

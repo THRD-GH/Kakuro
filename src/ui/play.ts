@@ -23,7 +23,7 @@ import {
   zoomIcon,
 } from './icons.ts';
 import { Board } from './board.ts';
-import { CombosBar, fillCandidates } from './combos.ts';
+import { CombosBar, dodgeSide, fillCandidates } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
 import { DOUBLE_MS, bindPan, bindTap } from './pointer.ts';
 import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
@@ -43,6 +43,16 @@ export class PlayScreen {
   private hintNote: HTMLElement;
 
   private zoomed = false;
+  /** Panning a zoomed board slides the cell being played under the table; the table gets out of its way. */
+  private paneScrollQueued = false;
+  private readonly onPaneScroll = (): void => {
+    if (this.paneScrollQueued) return;
+    this.paneScrollQueued = true;
+    requestAnimationFrame(() => {
+      this.paneScrollQueued = false;
+      this.dodgeCombos();
+    });
+  };
   /** The last digit typed on a keyboard, to tell a double press from two presses. */
   private lastDigitKey: { digit: number; cell: number; at: number } | null = null;
   /**
@@ -137,7 +147,10 @@ export class PlayScreen {
      * thumb can hit. On anything wider there is room to show the whole board.
      */
     const pane = this.node.querySelector<HTMLElement>('.board-wrap');
-    if (pane) bindPan(pane);
+    if (pane) {
+      bindPan(pane);
+      pane.addEventListener('scroll', this.onPaneScroll, { passive: true });
+    }
 
     /*
      * The bar floats over the foot of the board, which is where a scroll pane
@@ -213,6 +226,37 @@ export class PlayScreen {
     // Nothing is owed when the bar is beside the board rather than over it.
     const over = area.contains(bar);
     area.style.setProperty('--bar-h', over ? `${Math.round(bar.offsetHeight)}px` : '0px');
+    this.dodgeCombos();
+  }
+
+  /**
+   * Keep the table off the cell being played, by moving the table.
+   *
+   * Under the board it covered the last rows of a big one, and on a board that
+   * already fits its pane there was nothing to scroll: those rows simply could
+   * not be played. Everything about where it goes is in `dodgeSide`; this
+   * measures what that needs and hangs the answer on the board area, where the
+   * stylesheet reads it.
+   */
+  private dodgeCombos(): void {
+    const area = this.node.querySelector<HTMLElement>('.board-area');
+    const pane = this.node.querySelector<HTMLElement>('.board-wrap');
+    const overlays = this.node.querySelector<HTMLElement>('.board-overlays');
+    const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
+    if (!area || !pane || !overlays || !bar) return;
+    // Beside the board, in the column, there is nothing to dodge.
+    if (!overlays.contains(bar)) {
+      area.classList.remove('combos-high');
+      return;
+    }
+    const cell = this.node.querySelector<HTMLElement>('.board .cell.sel');
+    const side = dodgeSide(
+      area.classList.contains('combos-high') ? 'top' : 'bottom',
+      pane.getBoundingClientRect(),
+      cell?.getBoundingClientRect() ?? null,
+      bar.offsetHeight,
+    );
+    area.classList.toggle('combos-high', side === 'top');
   }
 
   /** Called once the play tree is in the document, so the selected cell can take focus. */
@@ -460,6 +504,7 @@ export class PlayScreen {
     if (cell < 0) return;
     this.board.select(cell);
     this.combos.show(cell);
+    this.dodgeCombos();
   }
 
   /** The cell a digit is going into, with the hint display cleared off it. */
@@ -508,6 +553,7 @@ export class PlayScreen {
     this.hintDepth = 0;
     this.board.paint();
     this.combos.refresh();
+    this.dodgeCombos();
     this.undoButton.disabled = !this.game.canUndo;
     this.redoButton.disabled = !this.game.canRedo;
     this.queueSave();
@@ -925,6 +971,7 @@ export class PlayScreen {
   destroy(): void {
     this.stopFireworks?.();
     this.stopFireworks = null;
+    this.node.querySelector<HTMLElement>('.board-wrap')?.removeEventListener('scroll', this.onPaneScroll);
     this.barWatch?.disconnect();
     this.barWatch = null;
     this.wide.removeEventListener('change', this.replace);

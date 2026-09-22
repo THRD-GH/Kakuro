@@ -344,3 +344,36 @@ export function fillCandidates(game: Game): number[] {
 
   return out;
 }
+
+// ------------------------------------------------------------------ dodging
+
+/** Which end of the board the table sits at, while it is over the board at all. */
+export type StripSide = 'bottom' | 'top';
+
+/**
+ * Where to put the table so it is not over the cell being played.
+ *
+ * It belongs under the board — the eye is on the clue and the cell, not the
+ * foot of the grid — but the last rows are played down there too, and behind
+ * the table they could not be played at all. So it dodges, rather than the
+ * board giving up height for it, which on a 16x16 is the scarce thing.
+ *
+ * The test is where the cell sits in the pane rather than which row it is: a
+ * zoomed board scrolls, so the bottom row of the grid and the bottom of the
+ * view are different places. Where neither end is in the way both overlaps are
+ * nothing, and a tie keeps the side it is on, so a cursor crossing the middle
+ * leaves the table where it is instead of flapping from end to end.
+ */
+export function dodgeSide(
+  current: StripSide,
+  view: { top: number; bottom: number },
+  cell: { top: number; bottom: number } | null,
+  stripHeight: number,
+  margin = 8,
+): StripSide {
+  if (!cell || stripHeight <= 0) return current;
+  const underBottom = Math.max(0, cell.bottom + margin - (view.bottom - stripHeight));
+  const underTop = Math.max(0, view.top + stripHeight + margin - cell.top);
+  if (underBottom === underTop) return current;
+  return underBottom < underTop ? 'bottom' : 'top';
+}

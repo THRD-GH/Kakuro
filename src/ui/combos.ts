@@ -360,20 +360,24 @@ export type StripSide = 'bottom' | 'top';
  *
  * The test is where the cell sits in the pane rather than which row it is: a
  * zoomed board scrolls, so the bottom row of the grid and the bottom of the
- * view are different places. Where neither end is in the way both overlaps are
- * nothing, and a tie keeps the side it is on, so a cursor crossing the middle
- * leaves the table where it is instead of flapping from end to end.
+ * view are different places.
+ *
+ * Under the board is home, and it goes back there the moment the play leaves
+ * the last rows. It used to keep whichever end it was on while both were
+ * clear, which reads as the table following you about: sent up by one dip to
+ * the bottom row, it then sat over the clues for the rest of the grid.
  */
 export function dodgeSide(
-  current: StripSide,
   view: { top: number; bottom: number },
   cell: { top: number; bottom: number } | null,
   stripHeight: number,
   margin = 8,
 ): StripSide {
-  if (!cell || stripHeight <= 0) return current;
+  if (!cell || stripHeight <= 0) return 'bottom';
   const underBottom = Math.max(0, cell.bottom + margin - (view.bottom - stripHeight));
+  if (underBottom === 0) return 'bottom';
+  // Behind it down there, so it goes up — unless up there is worse, which only
+  // happens on a table too tall for the window to clear at either end.
   const underTop = Math.max(0, view.top + stripHeight + margin - cell.top);
-  if (underBottom === underTop) return current;
-  return underBottom < underTop ? 'bottom' : 'top';
+  return underTop < underBottom ? 'top' : 'bottom';
 }

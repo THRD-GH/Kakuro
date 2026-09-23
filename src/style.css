@@ -725,19 +725,20 @@ p {
   -webkit-overflow-scrolling: touch;
   cursor: grab;
   /*
-   * Room under the board for the combination bar, which floats over the foot
-   * of this pane — exactly where a scroll pane keeps its horizontal scrollbar
-   * and where the last row of cells sits. Without it, turning the table on
-   * covered both and the puzzle could not be moved. play.ts keeps this in step
-   * with the bar's real height.
+   * Zoomed, the grid runs past its window, so the window is what carries the
+   * outline: the edge of the board you can actually see. Unzoomed the grid's
+   * own frame is that edge and this would only draw a second one around it.
    */
-  padding-bottom: var(--bar-h, 0px);
-}
-
-/* Up at the top, the room to scroll clear of it goes to the top with it. */
-.board-area.combos-high .board-wrap.zoomed {
-  padding-top: var(--bar-h, 0px);
-  padding-bottom: 0;
+  outline: 2px solid var(--line-strong);
+  outline-offset: -2px;
+  /*
+   * Nothing here pads for the table. This pane used to reserve the table's
+   * height so the last row could be scrolled clear of it — but that height
+   * changes with every digit entered, and a pane that re-pads itself as you
+   * type moves the grid under your hand; padding at the top moved it by the
+   * table's whole height at once. The table dodges instead, and the grid stays
+   * where it is put.
+   */
 }
 
 .board-wrap.zoomed.panning {
@@ -931,9 +932,15 @@ p {
  */
 .board-overlays {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /*
+   * Inside the play area rather than across it. Flush to the edges the table
+   * hid the very thing that says where the board stops, and a panel the exact
+   * width of the board reads as part of it; standing off, the board's outline
+   * runs all the way round the table and the two are plainly different things.
+   */
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
   z-index: 5;
   display: flex;
   flex-direction: column;
@@ -953,8 +960,19 @@ p {
  * sits, and takes it off when the play moves back up.
  */
 .board-area.combos-high .board-overlays {
-  top: 0;
+  top: 0.5rem;
   bottom: auto;
+}
+
+/*
+ * The board slides away from the table before either has to give. With the
+ * table under the board the grid sits at the top of its window, so the room
+ * the table takes is room the grid was not using: on a board that does not
+ * fill the window — anything under a zoomed 16x16 — it covers nothing at all.
+ * Only when the grid has the whole window does the dodge have work to do.
+ */
+.board-area.combos-over .board-wrap {
+  place-items: start center;
 }
 
 

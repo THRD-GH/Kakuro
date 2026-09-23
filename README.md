@@ -118,16 +118,28 @@ under the size a thumb can hit. Large and Huge boards therefore open zoomed on
 a narrow screen, scrolling inside their pane with the cursor kept in view.
 A finger pans it natively; a mouse drags it, since the alternative was the
 scrollbar and the combination bar floats over exactly where that lives. The
-bar also reserves its own height under the board, so the bottom row can always
-be scrolled clear of it.
+bar reserved its own height under the board for a while, so the bottom row
+could be scrolled clear of it — but that height changes with every digit
+entered, and a pane that re-pads itself as you type moves the grid under your
+hand. The table moves instead; the grid stays where you put it.
 
-On a phone the table floats over the foot of the board, and the foot of the
-board is where the last rows are played: behind the table they could not be
-played at all, and on a board that already fits its pane there is nothing to
-scroll them clear with. So the table dodges. When the cell being played is
-where it sits, it hops to the top of the board and stays there until the play
-moves back up — the board never gives up a pixel for it, which on a 16×16 is
-the scarce thing. It goes by where the cell is in the pane rather than which
+On a phone the table floats over the board, and it stands inside the play area
+rather than across it: narrower than the board and off its edges, so the
+board's outline runs all the way round the table and the two read as different
+things. Flush to the edges it hid the one line that says where the grid stops.
+Zoomed, where the grid runs past its window, the window carries that outline
+instead — the edge of the board you can actually see.
+
+The board moves before the table has to. With the table under it the grid sits
+at the top of its window, so the room the table takes is room the grid was not
+using; on anything that does not fill its window the table covers nothing at
+all. Where the grid does fill it — a zoomed 16×16 or 20×20 — the table dodges:
+when the cell being played is where it sits, it hops to the top of the board
+and comes straight back down as soon as the play leaves the last rows. Under
+the board is home: up top it is over the clues instead, which is no better, and
+a table that stays wherever it was last sent reads as one that follows you
+about. The board never gives up a pixel for it, which on a big board is the
+scarce thing. It goes by where the cell is in the pane rather than which
 row it is, because a zoomed board scrolls and the bottom row of the grid is not
 the bottom of the view; and a tie keeps the side it is on, so a cursor crossing
 the middle does not send it flapping from end to end.

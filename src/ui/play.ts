@@ -153,16 +153,14 @@ export class PlayScreen {
     }
 
     /*
-     * The bar floats over the foot of the board, which is where a scroll pane
-     * keeps its horizontal scrollbar and where the last row of cells sits.
-     * Reserving its height under the board lets both be scrolled clear of it,
-     * and a ResizeObserver keeps that in step as the bar grows and shrinks
-     * with what it has to say.
+     * The table grows and shrinks with what it has to say, and how tall it is
+     * decides where it can sit, so a ResizeObserver puts it back in its place
+     * whenever it changes size. It moves; the board does not.
      */
     const area = this.node.querySelector<HTMLElement>('.board-area');
     const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
     if (area && bar && typeof ResizeObserver !== 'undefined') {
-      this.barWatch = new ResizeObserver(() => this.measureBar());
+      this.barWatch = new ResizeObserver(() => this.dodgeCombos());
       this.barWatch.observe(bar);
     }
 
@@ -207,25 +205,6 @@ export class PlayScreen {
     if (!bar || !side || !overlays) return;
     const home = this.wide.matches ? side : overlays;
     if (bar.parentElement !== home) home.append(bar);
-    this.measureBar();
-  }
-
-  /**
-   * How much room the bar needs under the board.
-   *
-   * Measured rather than inferred from the setting: a folded bar is
-   * `display: none` and measures zero on its own, which is the right answer
-   * without a special case. It has to be taken while the tree is in the
-   * document, though — measured in the constructor, before main.ts appends it,
-   * everything is zero and the gutter never appeared.
-   */
-  private measureBar(): void {
-    const area = this.node.querySelector<HTMLElement>('.board-area');
-    const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
-    if (!area || !bar) return;
-    // Nothing is owed when the bar is beside the board rather than over it.
-    const over = area.contains(bar);
-    area.style.setProperty('--bar-h', over ? `${Math.round(bar.offsetHeight)}px` : '0px');
     this.dodgeCombos();
   }
 
@@ -246,17 +225,18 @@ export class PlayScreen {
     if (!area || !pane || !overlays || !bar) return;
     // Beside the board, in the column, there is nothing to dodge.
     if (!overlays.contains(bar)) {
-      area.classList.remove('combos-high');
+      area.classList.remove('combos-high', 'combos-over');
       return;
     }
     const cell = this.node.querySelector<HTMLElement>('.board .cell.sel');
     const side = dodgeSide(
-      area.classList.contains('combos-high') ? 'top' : 'bottom',
       pane.getBoundingClientRect(),
       cell?.getBoundingClientRect() ?? null,
       bar.offsetHeight,
     );
     area.classList.toggle('combos-high', side === 'top');
+    // Folded, it asks nothing of the board and the grid centres as it always did.
+    area.classList.toggle('combos-over', bar.offsetHeight > 0);
   }
 
   /** Called once the play tree is in the document, so the selected cell can take focus. */
@@ -454,7 +434,7 @@ export class PlayScreen {
     const open = this.app.settings.showCombos;
     const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
     bar?.classList.toggle('folded', !open);
-    this.measureBar();
+    this.dodgeCombos();
     this.tableButton?.setAttribute('aria-pressed', String(open));
     this.tableButton?.classList.toggle('on', open);
   }

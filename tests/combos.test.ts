@@ -187,28 +187,36 @@ test('Marks offers what the rules allow and stops there', () => {
 
 // ------------------------------------------------------------ table dodging
 
-// A pane 600 tall, and a table that takes a quarter of it.
+// A pane 600 tall, a table that takes a quarter of it, and cells 40 tall.
 const view = { top: 0, bottom: 600 };
+const cellAt = (top: number): { top: number; bottom: number } => ({ top, bottom: top + 40 });
 
-test('the table stays under the board while the play is clear of it', () => {
-  assert.equal(dodgeSide(view, { top: 250, bottom: 290 }, 150), 'bottom');
-  assert.equal(dodgeSide(view, { top: 20, bottom: 60 }, 150), 'bottom');
+test('the table stays where it is parked while the runs are clear of it', () => {
+  assert.equal(dodgeSide('bottom', view, [cellAt(250)], 150), 'bottom');
+  assert.equal(dodgeSide('top', view, [cellAt(250)], 150), 'top');
 });
 
-test('a cell behind the table sends it up, and it comes straight back down', () => {
-  assert.equal(dodgeSide(view, { top: 500, bottom: 540 }, 150), 'top');
-  // Back up the board, clear of where the table sits: home it goes.
-  assert.equal(dodgeSide(view, { top: 380, bottom: 420 }, 150), 'bottom');
+test('a run behind the table sends it to the other end', () => {
+  assert.equal(dodgeSide('bottom', view, [cellAt(500)], 150), 'top');
+  assert.equal(dodgeSide('top', view, [cellAt(20)], 150), 'bottom');
 });
 
-test('a table too tall to clear takes the end that covers less', () => {
-  // 340 of a 600 pane: the cell is behind it either way, and the top covers less.
-  assert.equal(dodgeSide(view, { top: 300, bottom: 340 }, 340), 'top');
-  // Dead even goes home rather than staying up.
-  assert.equal(dodgeSide(view, { top: 280, bottom: 320 }, 340), 'bottom');
+test('the whole run counts, not just the cell being played', () => {
+  // The cell at 300 is clear of a table at the foot; the rest of its down run
+  // is not, and those cells are the working the table is explaining.
+  const down = [cellAt(300), cellAt(340), cellAt(380), cellAt(420), cellAt(460)];
+  assert.equal(dodgeSide('bottom', view, down, 150), 'top');
 });
 
-test('a folded table, or no cell, leaves it under the board', () => {
-  assert.equal(dodgeSide(view, null, 150), 'bottom');
-  assert.equal(dodgeSide(view, { top: 500, bottom: 540 }, 0), 'bottom');
+test('with both ends in the way it takes the one that covers less', () => {
+  // A 240-tall table: four of these are behind it at the top, one at the foot.
+  const down = [cellAt(60), cellAt(100), cellAt(140), cellAt(180), cellAt(500)];
+  assert.equal(dodgeSide('top', view, down, 240), 'bottom');
+  // Dead even stays parked rather than hopping for nothing.
+  assert.equal(dodgeSide('top', view, [cellAt(60), cellAt(500)], 240), 'top');
+});
+
+test('a folded table, or nothing selected, leaves it parked', () => {
+  assert.equal(dodgeSide('bottom', view, [], 150), 'bottom');
+  assert.equal(dodgeSide('top', view, [cellAt(500)], 0), 'top');
 });

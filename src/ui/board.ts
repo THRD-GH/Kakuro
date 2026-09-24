@@ -115,7 +115,14 @@ export class Board {
 
     const cell = node.getBoundingClientRect();
     const view = pane.getBoundingClientRect();
-    const margin = cell.height;
+    /*
+     * Only a cell that is actually outside the window is scrolled to. There
+     * used to be a cell's worth of margin, so selecting anything near an edge
+     * slid the board under the player's hand — and it left the same grid row
+     * at a different height on screen from one tap to the next, which the
+     * table then dodged differently each time. The board stays where it is put.
+     */
+    const margin = 0;
 
     if (scrollsY) {
       if (cell.top < view.top + margin) pane.scrollTop -= view.top + margin - cell.top;
@@ -129,6 +136,12 @@ export class Board {
 
   get selection(): number {
     return this.selected;
+  }
+
+  /** Where a cell is on screen, for anything that has to keep clear of it. */
+  rectFor(cell: number): DOMRect | null {
+    const node = this.cells[cell];
+    return node ? node.getBoundingClientRect() : null;
   }
 
   /** Tint the cells a hint is talking about. */

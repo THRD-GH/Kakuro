@@ -35,6 +35,7 @@ export function openHelp(): void {
     section('The table', [
       'The strip under the board lists every combination that still fits the two clues through the cell you are on — with the digits already written in taken out of both the total and the alphabet.',
       'So a 23 across with a 6 already in it shows the ways to make 17 in the cells that are left. Table hides it if you would rather do it in your head.',
+      'On a phone it floats over the board. Drag it by a clue badge to park it at the top or the bottom, and wherever it is parked it lifts itself to the other end whenever the row or column you are playing would go behind it — so nothing you are working on is ever hidden.',
     ]),
     section('Check and hint', [
       'Check marks digits that disagree with the unique answer. It is counted against the puzzle, so it is held rather than tapped by default. Instant check is different: it only flags a digit that already repeats in a run or overshoots a clue, and never consults the answer.',

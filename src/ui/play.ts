@@ -24,6 +24,7 @@ import {
 } from './icons.ts';
 import { Board } from './board.ts';
 import { CombosBar, dodgeSide, fillCandidates } from './combos.ts';
+import type { StripSide } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
 import { DOUBLE_MS, bindPan, bindTap } from './pointer.ts';
 import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
@@ -52,6 +53,55 @@ export class PlayScreen {
       this.paneScrollQueued = false;
       this.dodgeCombos();
     });
+  };
+  /**
+   * Which end of the board the player has parked the table at, and the drag
+   * that puts it there.
+   *
+   * The handle is a clue badge rather than the whole panel: the panel scrolls
+   * when a clue has more combinations than fit across it, and a drag that
+   * fought that scroll would be a poor thing to use. A badge does nothing else.
+   */
+  private combosSide: StripSide = 'bottom';
+  private dragFrom: number | null = null;
+  private readonly onCombosDown = (e: PointerEvent): void => {
+    const on = e.target as HTMLElement | null;
+    if (!on?.closest('.combos-clue')) return;
+    const overlays = this.node.querySelector<HTMLElement>('.board-overlays');
+    const bar = this.node.querySelector<HTMLElement>('.combos-wrap');
+    // In the column beside the board there is nowhere to drag it to.
+    if (!overlays || !bar || !overlays.contains(bar)) return;
+    this.dragFrom = e.clientY;
+    // Captured, so the drag carries on once the finger leaves the badge. A
+    // pointer that has already gone cannot be captured, and that is no reason
+    // to drop the drag: it goes by clientY, not by the capture.
+    try {
+      bar.setPointerCapture(e.pointerId);
+    } catch {
+      // Nothing to do about it.
+    }
+  };
+  private readonly onCombosMove = (e: PointerEvent): void => {
+    if (this.dragFrom === null) return;
+    // A little slop first, so resting a finger on a badge is not a drag.
+    if (Math.abs(e.clientY - this.dragFrom) < 8) return;
+    const area = this.node.querySelector<HTMLElement>('.board-area');
+    const pane = this.node.querySelector<HTMLElement>('.board-wrap');
+    if (!area || !pane) return;
+    const view = pane.getBoundingClientRect();
+    // Two resting places, and the finger picks one by the half it is in.
+    const side: StripSide = e.clientY < (view.top + view.bottom) / 2 ? 'top' : 'bottom';
+    if (side === this.combosSide) return;
+    this.combosSide = side;
+    /*
+     * Straight there, without consulting the dodge: a table that answered back
+     * mid-drag would read as broken. The rule takes over at the next selection
+     * and will lift it off the run then if this end is in the way.
+     */
+    area.classList.toggle('combos-high', side === 'top');
+  };
+  private readonly onCombosUp = (): void => {
+    this.dragFrom = null;
   };
   /** The last digit typed on a keyboard, to tell a double press from two presses. */
   private lastDigitKey: { digit: number; cell: number; at: number } | null = null;
@@ -163,6 +213,13 @@ export class PlayScreen {
       this.barWatch = new ResizeObserver(() => this.dodgeCombos());
       this.barWatch.observe(bar);
     }
+    if (bar) {
+      // On the tree, so they go when it goes, like every button on it.
+      bar.addEventListener('pointerdown', this.onCombosDown);
+      bar.addEventListener('pointermove', this.onCombosMove);
+      bar.addEventListener('pointerup', this.onCombosUp);
+      bar.addEventListener('pointercancel', this.onCombosUp);
+    }
 
     this.placeCombos();
     /*
@@ -228,15 +285,40 @@ export class PlayScreen {
       area.classList.remove('combos-high', 'combos-over');
       return;
     }
-    const cell = this.node.querySelector<HTMLElement>('.board .cell.sel');
+    const view = pane.getBoundingClientRect();
+    const strip = bar.getBoundingClientRect();
+    // How far off the edge the stylesheet holds it: measured, not repeated here.
+    const inset =
+      area.classList.contains('combos-high') ? strip.top - view.top : view.bottom - strip.bottom;
     const side = dodgeSide(
-      pane.getBoundingClientRect(),
-      cell?.getBoundingClientRect() ?? null,
+      this.combosSide,
+      view,
+      this.playedBands(),
       bar.offsetHeight,
+      Math.max(0, Math.round(inset)),
     );
     area.classList.toggle('combos-high', side === 'top');
     // Folded, it asks nothing of the board and the grid centres as it always did.
     area.classList.toggle('combos-over', bar.offsetHeight > 0);
+  }
+
+  /**
+   * The cells the table has to keep clear of: the one being played and both
+   * runs through it, which are the runs the table is talking about.
+   */
+  private playedBands(): DOMRect[] {
+    const selected = this.board.selection;
+    if (selected < 0) return [];
+    const wanted = new Set<number>([selected]);
+    for (const run of [this.game.acrossRun(selected), this.game.downRun(selected)]) {
+      if (run) for (const cell of run.cells) wanted.add(cell);
+    }
+    const bands: DOMRect[] = [];
+    for (const cell of wanted) {
+      const rect = this.board.rectFor(cell);
+      if (rect) bands.push(rect);
+    }
+    return bands;
   }
 
   /** Called once the play tree is in the document, so the selected cell can take focus. */

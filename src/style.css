@@ -953,6 +953,17 @@ p {
 }
 
 /*
+ * Over the board, a clue badge is the handle the table is dragged by, so it
+ * takes the gesture rather than letting the browser scroll the panel with it.
+ * In the column beside the board there is nowhere to drag it to, and the badge
+ * is just a badge again.
+ */
+.board-overlays .combos-clue {
+  cursor: grab;
+  touch-action: none;
+}
+
+/*
  * The table dodges; the board never gives up a pixel for it. Under the board
  * is where it belongs, but the last rows are played down there too, and on a
  * board that already fits its pane there is nothing to scroll them clear with.

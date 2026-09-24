@@ -133,16 +133,28 @@ instead — the edge of the board you can actually see.
 The board moves before the table has to. With the table under it the grid sits
 at the top of its window, so the room the table takes is room the grid was not
 using; on anything that does not fill its window the table covers nothing at
-all. Where the grid does fill it — a zoomed 16×16 or 20×20 — the table dodges:
-when the cell being played is where it sits, it hops to the top of the board
-and comes straight back down as soon as the play leaves the last rows. Under
-the board is home: up top it is over the clues instead, which is no better, and
-a table that stays wherever it was last sent reads as one that follows you
-about. The board never gives up a pixel for it, which on a big board is the
-scarce thing. It goes by where the cell is in the pane rather than which
-row it is, because a zoomed board scrolls and the bottom row of the grid is not
-the bottom of the view; and a tie keeps the side it is on, so a cursor crossing
-the middle does not send it flapping from end to end.
+all. Where the grid does fill it — a zoomed 16×16 or 20×20 — the table is the
+player's to park: drag it by a clue badge and it rests at whichever end of the
+board the finger was nearest. The board never gives up a pixel for it, which on
+a big board is the scarce thing.
+
+Parked, it stays parked until it is in the way, and the way is not the selected
+cell alone — it is every cell of the across and down runs through it. Those
+runs are the reason a combination is or is not on the table, and the cells
+behind it can be neither read nor tapped; watching only the cell left the table
+lying across the rest of the row being played. So when either run would go
+behind it, it lifts to the other end, and returns to where it was parked once
+the run is clear. Where a table is too tall for the window to clear at either
+end it takes the one that covers less of the runs, and a tie stays put rather
+than hopping for nothing. The bands are worked out from the pane rather than
+from row numbers, because a zoomed board scrolls: the bottom row of the grid is
+not the bottom of the view.
+
+Tapping a cell scrolls the board only when that cell is off screen. It used to
+scroll whenever the selection came within a cell of an edge, which slid the
+board under the hand and left the same row at a different height from one tap to
+the next — and the table, which goes by where things are rather than which row
+they are, then dodged differently each time.
 
 The key's arrows show what the next press does: pointing apart to zoom in,
 turned inward once zoomed, to come back out. Zooming in never makes the board

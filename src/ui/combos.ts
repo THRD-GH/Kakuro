@@ -350,34 +350,46 @@ export function fillCandidates(game: Game): number[] {
 /** Which end of the board the table sits at, while it is over the board at all. */
 export type StripSide = 'bottom' | 'top';
 
+/** A band down the pane: a cell, one of the runs through it, or the table. */
+export interface Band {
+  top: number;
+  bottom: number;
+}
+
 /**
- * Where to put the table so it is not over the cell being played.
+ * Which end of the board the table should sit at.
  *
- * It belongs under the board — the eye is on the clue and the cell, not the
- * foot of the grid — but the last rows are played down there too, and behind
- * the table they could not be played at all. So it dodges, rather than the
- * board giving up height for it, which on a 16x16 is the scarce thing.
+ * `preferred` is where the player has parked it, and it stays parked. What
+ * moves it is being in the way — and the way is not the selected cell alone,
+ * it is every cell of the across and down runs through it. Those runs are the
+ * whole reason a combination is or is not on the table, and one sitting over
+ * half of a run hides the working that explains it; worse, the cells behind it
+ * can be neither read nor tapped, which is what watching only the cell missed.
  *
- * The test is where the cell sits in the pane rather than which row it is: a
- * zoomed board scrolls, so the bottom row of the grid and the bottom of the
- * view are different places.
- *
- * Under the board is home, and it goes back there the moment the play leaves
- * the last rows. It used to keep whichever end it was on while both were
- * clear, which reads as the table following you about: sent up by one dip to
- * the bottom row, it then sat over the clues for the rest of the grid.
+ * Where both ends are in the way — a table too tall for the window to clear at
+ * either end — it takes the one that covers fewer cells of the runs, and a tie
+ * stays put rather than hopping for nothing. The bands come from the pane, not
+ * from row numbers: a zoomed board scrolls, so the bottom row of the grid and
+ * the bottom of the window are different places.
  */
 export function dodgeSide(
-  view: { top: number; bottom: number },
-  cell: { top: number; bottom: number } | null,
+  preferred: StripSide,
+  view: Band,
+  run: Band[],
   stripHeight: number,
-  margin = 8,
+  inset = 8,
 ): StripSide {
-  if (!cell || stripHeight <= 0) return 'bottom';
-  const underBottom = Math.max(0, cell.bottom + margin - (view.bottom - stripHeight));
-  if (underBottom === 0) return 'bottom';
-  // Behind it down there, so it goes up — unless up there is worse, which only
-  // happens on a table too tall for the window to clear at either end.
-  const underTop = Math.max(0, view.top + stripHeight + margin - cell.top);
-  return underTop < underBottom ? 'top' : 'bottom';
+  if (stripHeight <= 0 || run.length === 0) return preferred;
+  const band = (side: StripSide): Band =>
+    side === 'bottom'
+      ? { top: view.bottom - inset - stripHeight, bottom: view.bottom - inset }
+      : { top: view.top + inset, bottom: view.top + inset + stripHeight };
+  const covered = (side: StripSide): number => {
+    const { top, bottom } = band(side);
+    return run.filter((cell) => cell.bottom > top && cell.top < bottom).length;
+  };
+  const here = covered(preferred);
+  if (here === 0) return preferred;
+  const other: StripSide = preferred === 'bottom' ? 'top' : 'bottom';
+  return covered(other) < here ? other : preferred;
 }

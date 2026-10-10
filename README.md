@@ -392,6 +392,21 @@ explains in full; then the build stamp; on the smallest phones, the title the
 bar above already says. Measured with a picture behind it and unfinished games
 waiting, it fits at 390×664, 375×553 and 360×640.
 
+**On a laptop, two columns.** The same screen has the opposite trouble on a
+window that is wide but not tall: 780px of menu, or 857 with a picture behind
+it and a game parked, in the ~650px a laptop leaves once the browser's own
+chrome is up — the last belts under the bottom of the window and the foot with
+them. None of the phone's tightening reaches it, since all of that is written
+behind `max-width: 559px`, and giving print up is the wrong trade when what is
+short is the height and what is going spare is the width. So from 48rem wide,
+and up to 54rem tall, the belt ladder stands beside the hero, the boards and
+the foot rather than under them — the move the play screen makes at the same
+width, for the same reason. 48rem is where it starts because that is the
+narrowest the belt rows read at their full height: at 42rem half of them wrap
+to a second line. 54rem is where it stops because that is the tallest the
+single column ever needs. Measured with a picture behind it and a game parked,
+it fits at 768×620, 1024×650, 1280×600, 1366×700 and 1440×760.
+
 The top bar keeps its controls on any width: the puzzle's name is the part that
 gives way, trimming to an ellipsis before the ⋯ at the end can be pushed past
 the edge of a screen that clips what spills — checked with text set to 150%.

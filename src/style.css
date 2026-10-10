@@ -1927,6 +1927,59 @@ p {
 }
 
 /*
+ * A wide window that is not tall: the menu stands in two columns.
+ *
+ * It is a long screen — the hero, four boards, six belts and the foot — and a
+ * laptop with the browser's own chrome showing leaves about 650px of window
+ * for 780px of menu, or 857 with a picture behind it and a game parked, so
+ * the belts ran under the bottom of the screen and the foot with them. That
+ * worst case is what 54rem is: above it the single column fits whatever is on
+ * it. Phones have had an answer since the beginning: drop the
+ * standfirst, then each belt's third line, then the headings. None of it
+ * reached here, because all of it is written behind `max-width: 559px` — and
+ * hiding print is the wrong trade anyway when what is short is the height and
+ * what is going spare is the width.
+ *
+ * So the ladder stands beside the hero, the boards and the foot rather than
+ * under them. It is the move the play screen makes at the same breakpoint, for
+ * the same reason: use the width the window has, not the height it has not.
+ *
+ * Five rows, because a parked game puts a sixth child between the ladder and
+ * the foot, and the ladder spans whatever the left-hand column comes to.
+ */
+@media (min-width: 48rem) and (min-height: 35rem) and (max-height: 54rem) {
+  .menu {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    /*
+     * The last row takes the slack. The ladder is taller than the four boxes
+     * beside it, and a spanning item's extra height is shared out among the
+     * rows it covers — so with five content-sized rows the hero, the boards
+     * and the foot would drift apart down the column. Against one flexible
+     * row the others stay the size of what is in them and the space collects
+     * underneath, where there is nothing to push about.
+     */
+    grid-template-rows: auto auto auto auto 1fr;
+    column-gap: 1.25rem;
+    align-content: start;
+  }
+
+  .menu > * {
+    grid-column: 1;
+    align-self: start;
+  }
+
+  .menu > .titlebar {
+    grid-column: 1 / -1;
+  }
+
+  .menu > .levels {
+    grid-column: 2;
+    grid-row: 2 / -1;
+  }
+}
+
+/*
  * Landscape on a phone, where height is the scarce thing: the board takes the
  * full height and the controls move to a column beside it. Stacking here would
  * push the keypad off the bottom of the screen.

@@ -388,22 +388,37 @@ level row is a single button that starts a puzzle, and a button cannot sit
 inside a button, so the `?` has a cell of its own at the end of the row rather
 than inside the belt's lines as killer draws it.
 
-**On a phone, one screen.** The menu ran to 793px on a 664px phone — about
-what an iPhone shows with Safari's bars up — and to 856 with a picture behind
-it, so the last belts and the Resume button were a scroll away. It now tightens
-on any phone and gives things up in steps as the screen gets shorter: first the
-standfirst, each belt's third line and the hint, which the `?` on every belt
-explains in full; then the build stamp; on the smallest phones, the title the
-bar above already says. Measured with a picture behind it and unfinished games
-waiting, it fits at 390×664, 375×553 and 360×640.
+**On a narrow screen, one screen.** The menu ran to 793px on a 664px phone —
+about what an iPhone shows with Safari's bars up — and to 856 with a picture
+behind it, so the last belts and the Resume button were a scroll away. It now
+gives things up in steps as the screen gets shorter: first the standfirst,
+each belt's third line and the hint, which the `?` on every belt explains in
+full; then the build stamp, with a smaller title and the belts closed up; then
+the headings and the title the bar above already says.
+
+The ladder is gated on width rather than on being a phone, and runs up to the
+two-column breakpoint, so a small desktop window or an upright tablet squashed
+short tightens the same way. It stopped at 559px for a while, which left the
+band between there and 48rem with neither the columns nor the tightening: it
+carried desktop spacing on a screen with no room for it — 45px of the overflow
+was margin alone — and scrolled for the last belts.
+
+Each step changes hands where the step above it stops fitting, which is
+measured rather than guessed. With a picture behind it and a game parked, the
+menu stands at 812 untouched, 677 after the first step, 618 after the second
+and 514 after the third, so the steps start at 815, 680 and 620. The old 780
+and 600 were a little too low at both ends: a tall phone at 800 lost 12px off
+the bottom, and a 610px window lost 14. Measured in that state it fits at
+390×664, 375×553, 360×640, 430×800 and 390×700, and at 767×540, 700×700,
+640×650, 600×620 and 560×560 in the band above the phones; a phone tall
+enough to need none of it, 412×915, gives nothing up.
 
 **On a laptop, two columns.** The same screen has the opposite trouble on a
 window that is wide but not tall: 780px of menu, or 857 with a picture behind
 it and a game parked, in the ~650px a laptop leaves once the browser's own
 chrome is up — the last belts under the bottom of the window and the foot with
-them. None of the phone's tightening reaches it, since all of that is written
-behind `max-width: 559px`, and giving print up is the wrong trade when what is
-short is the height and what is going spare is the width. So from 48rem wide,
+them. The ladder could tighten it, but giving print up is the wrong trade when
+what is short is the height and what is going spare is the width. So from 48rem wide,
 and up to 54rem tall, the belt ladder stands beside the hero, the boards and
 the foot rather than under them — the move the play screen makes at the same
 width, for the same reason. 48rem is where it starts because that is the

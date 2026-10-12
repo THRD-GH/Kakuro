@@ -1,9 +1,10 @@
 import type { KeypadSide, Settings, Theme } from '../game/storage.ts';
 import { POOL_SIZES, exportBackup, importBackup, saveSettings } from '../game/storage.ts';
+import { checkForUpdate, whenUpdateLands } from '../game/pwa.ts';
 import type { AppContext } from './app-context.ts';
 import { BACKGROUNDS, customPhoto, forgetPhoto, keepPhoto } from './backgrounds.ts';
 import { previewFireworks } from './celebration.ts';
-import { clear, el } from './dom.ts';
+import { buildStamp, clear, el } from './dom.ts';
 import { confirmPanel, openOverlay, toast } from './overlay.ts';
 
 /** Only the on/off settings are switches. */
@@ -369,10 +370,20 @@ export function openSettings(app: AppContext): void {
     el('div', { class: 'tabs' }, exportData, importData, file),
   );
 
+  const update = el('button', { type: 'button', text: 'Check for updates' });
+  update.addEventListener('click', () => void askForUpdate(update));
+  const updateRow = stacked(
+    'This app',
+    `${buildStamp()}. Added to a home screen it keeps its own copy and quietly replaces it ` +
+      'when a new one is published. This asks now, and restarts the app if there is one.',
+    el('div', { class: 'tabs' }, update),
+  );
+
   const gameRows = [
     poolRow,
     ...rows(['allowSingleMark', 'autoRemoveMarks', 'instantCheck', 'checkNeedsHold', 'hintNeedsHold', 'marksNeedsHold', 'clearNeedsHold', 'undoNeedsHold']),
     dataRow,
+    updateRow,
   ];
   const displayRows = [
     themeRow,
@@ -405,4 +416,31 @@ export function openSettings(app: AppContext): void {
     title: 'Settings',
     actions: [{ label: 'Done', primary: true }],
   });
+}
+
+/**
+ * The update command: ask, say what came of it, and get out of the way.
+ *
+ * A reload is the only way the running page can become the new version, so
+ * `updating` ends in one — after the new worker has taken over, or it would
+ * reload into the old cache and nothing would have happened. The game is
+ * saved on the way out by the `pagehide` handler in main.ts, so a puzzle in
+ * progress survives it.
+ */
+async function askForUpdate(button: HTMLButtonElement): Promise<void> {
+  const label = button.textContent ?? 'Check for updates';
+  button.disabled = true;
+  button.textContent = 'Checking…';
+  const found = await checkForUpdate();
+  button.textContent = label;
+
+  if (found === 'updating') {
+    toast('A new version is coming down. The app will restart.');
+    whenUpdateLands(() => window.location.reload());
+    return;
+  }
+  button.disabled = false;
+  if (found === 'offline') toast('No answer from the server. Try again on a connection.');
+  else if (found === 'none') toast('Nothing installed here to update — a reload has the latest.');
+  else toast('This is the latest version.');
 }

@@ -383,4 +383,10 @@ class App implements AppContext {
 const root = document.querySelector<HTMLElement>('#app');
 if (root) new App(root);
 
-registerServiceWorker(() => toast('A new version has loaded.'));
+/*
+ * The worker found a new version by itself and has taken the page over, but
+ * the code already running is the code that started: it is ready, not loaded,
+ * and saying otherwise sent players looking for a change that was not there
+ * yet. Settings has a Check for updates that does restart the app.
+ */
+registerServiceWorker(() => toast('A new version is ready. It loads next time you open the app.'));

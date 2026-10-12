@@ -13,6 +13,18 @@ It is a PWA: installable from the browser, and it runs offline. Every puzzle is
 generated on the device, so there is no collection to download — the whole app
 is about 110 kB and works on a train from the first run.
 
+The worker looks for a new build each time the app comes back to the
+foreground, installs it in the background and takes over the page; the code
+already running stays as it is until something reloads it, so the notice for
+that says the version is *ready*, not that it has loaded — it arrives at the
+next launch. Installed to a home
+screen there is nothing to reload *with* — no address bar, no refresh — so
+Settings carries **This app**: the build you are running, and a button that
+asks the server now. A new one found there restarts the app once the new
+worker is driving it, since reloading any earlier would only serve the old
+cache again. The unfinished game is written out by the `pagehide` handler on
+the way through.
+
 `npm run build` regenerates `dist/sw.js` from the actual build output, so the
 precache list always matches the hashed filenames. `npm run icons` redraws the
 app icons, and `npm run verify` generates across the whole board-by-level

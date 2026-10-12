@@ -191,32 +191,42 @@ test('Marks offers what the rules allow and stops there', () => {
 const view = { top: 0, bottom: 600 };
 const cellAt = (top: number): { top: number; bottom: number } => ({ top, bottom: top + 40 });
 
-test('the table stays where it is parked while the runs are clear of it', () => {
-  assert.equal(dodgeSide('bottom', view, [cellAt(250)], 150), 'bottom');
-  assert.equal(dodgeSide('top', view, [cellAt(250)], 150), 'top');
+test('the bottom third of the grid sends the table to the top', () => {
+  // A 16x16: the bottom six rows, counted as the player sees them.
+  for (const row of [10, 11, 12, 13, 14, 15]) {
+    assert.equal(dodgeSide('bottom', { row, rows: 16 }), 'top');
+  }
 });
 
-test('a run behind the table sends it to the other end', () => {
-  assert.equal(dodgeSide('bottom', view, [cellAt(500)], 150), 'top');
-  assert.equal(dodgeSide('top', view, [cellAt(20)], 150), 'bottom');
+test('the top third sends it back down', () => {
+  for (const row of [0, 2, 5]) assert.equal(dodgeSide('top', { row, rows: 16 }), 'bottom');
 });
 
-test('the whole run counts, not just the cell being played', () => {
-  // The cell at 300 is clear of a table at the foot; the rest of its down run
-  // is not, and those cells are the working the table is explaining.
-  const down = [cellAt(300), cellAt(340), cellAt(380), cellAt(420), cellAt(460)];
-  assert.equal(dodgeSide('bottom', view, down, 150), 'top');
+test('the middle third leaves it where the player parked it', () => {
+  assert.equal(dodgeSide('bottom', { row: 7, rows: 16 }), 'bottom');
+  assert.equal(dodgeSide('top', { row: 7, rows: 16 }), 'top');
 });
 
-test('with both ends in the way it takes the one that covers less', () => {
-  // A 240-tall table: four of these are behind it at the top, one at the foot.
-  const down = [cellAt(60), cellAt(100), cellAt(140), cellAt(180), cellAt(500)];
-  assert.equal(dodgeSide('top', view, down, 240), 'bottom');
-  // Dead even stays parked rather than hopping for nothing.
-  assert.equal(dodgeSide('top', view, [cellAt(60), cellAt(500)], 240), 'top');
+test('every board splits into thirds, not just the big one', () => {
+  assert.equal(dodgeSide('bottom', { row: 6, rows: 9 }), 'top');
+  assert.equal(dodgeSide('bottom', { row: 5, rows: 9 }), 'bottom');
+  assert.equal(dodgeSide('bottom', { row: 8, rows: 12 }), 'top');
+  assert.equal(dodgeSide('bottom', { row: 13, rows: 20 }), 'top');
+  assert.equal(dodgeSide('bottom', { row: 12, rows: 20 }), 'bottom');
 });
 
-test('a folded table, or nothing selected, leaves it parked', () => {
-  assert.equal(dodgeSide('bottom', view, [], 150), 'bottom');
-  assert.equal(dodgeSide('top', view, [cellAt(500)], 0), 'top');
+test('it will not stand on the cell being played, whatever the row says', () => {
+  // A zoomed board scrolled to its last rows: row 14 of 16 is up at the top of
+  // the window, which is where the thirds would send the table.
+  const atTop = { view, cell: cellAt(20), stripHeight: 150 };
+  assert.equal(dodgeSide('bottom', { row: 14, rows: 16 }, atTop), 'bottom');
+  // Clear of both ends, the row has the last word.
+  assert.equal(dodgeSide('bottom', { row: 14, rows: 16 }, { ...atTop, cell: cellAt(300) }), 'top');
+  // Behind it either way, it stays where the row sent it.
+  const tall = { ...atTop, cell: { top: 20, bottom: 580 } };
+  assert.equal(dodgeSide('bottom', { row: 14, rows: 16 }, tall), 'top');
+});
+
+test('a folded table is placed by the row alone', () => {
+  assert.equal(dodgeSide('bottom', { row: 14, rows: 16 }, { view, cell: cellAt(20), stripHeight: 0 }), 'top');
 });

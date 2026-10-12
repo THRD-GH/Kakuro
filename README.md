@@ -138,17 +138,22 @@ player's to park: drag it by a clue badge and it rests at whichever end of the
 board the finger was nearest. The board never gives up a pixel for it, which on
 a big board is the scarce thing.
 
-Parked, it stays parked until it is in the way, and the way is not the selected
-cell alone — it is every cell of the across and down runs through it. Those
-runs are the reason a combination is or is not on the table, and the cells
-behind it can be neither read nor tapped; watching only the cell left the table
-lying across the rest of the row being played. So when either run would go
-behind it, it lifts to the other end, and returns to where it was parked once
-the run is clear. Where a table is too tall for the window to clear at either
-end it takes the one that covers less of the runs, and a tie stays put rather
-than hopping for nothing. The bands are worked out from the pane rather than
-from row numbers, because a zoomed board scrolls: the bottom row of the grid is
-not the bottom of the view.
+Parked, it stays parked while the play is in the middle of the grid. The bottom
+third of the board sends it up and the top third sends it down — on a 16×16,
+the bottom six rows and the top six, which are the rows you are on when it is
+in the way.
+
+It went by the pixels for a while, moving whenever the across or down run
+through the cell overlapped the strip. That is the finer answer and an
+unpredictable one: a zoomed board scrolls, so the same row gave a different
+place depending on how far the board had been panned, and two cells on one row
+could send the table to opposite ends. A rule that can be read off the grid
+beats a rule that is exactly right.
+
+The pixels keep one say. A zoomed board scrolled down to its last rows leaves
+the row being played at the *top* of the window, which is where the thirds
+would send the table — so if the end the row asks for would stand on the
+selected cell, and the other end is clear, it goes to the other end instead.
 
 Tapping a cell scrolls the board only when that cell is off screen. It used to
 scroll whenever the selection came within a cell of an edge, which slid the

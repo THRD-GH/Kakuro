@@ -285,40 +285,27 @@ export class PlayScreen {
       area.classList.remove('combos-high', 'combos-over');
       return;
     }
-    const view = pane.getBoundingClientRect();
-    const strip = bar.getBoundingClientRect();
-    // How far off the edge the stylesheet holds it: measured, not repeated here.
-    const inset =
-      area.classList.contains('combos-high') ? strip.top - view.top : view.bottom - strip.bottom;
-    const side = dodgeSide(
-      this.combosSide,
-      view,
-      this.playedBands(),
-      bar.offsetHeight,
-      Math.max(0, Math.round(inset)),
-    );
-    area.classList.toggle('combos-high', side === 'top');
+    const selected = this.board.selection;
+    if (selected >= 0) {
+      const view = pane.getBoundingClientRect();
+      const strip = bar.getBoundingClientRect();
+      // How far off the edge the stylesheet holds it: measured, not repeated here.
+      const inset = area.classList.contains('combos-high')
+        ? strip.top - view.top
+        : view.bottom - strip.bottom;
+      const cell = this.board.rectFor(selected);
+      const rows = this.game.puzzle.size;
+      const side = dodgeSide(
+        this.combosSide,
+        { row: Math.floor(selected / rows), rows },
+        cell === null
+          ? undefined
+          : { view, cell, stripHeight: bar.offsetHeight, inset: Math.max(0, Math.round(inset)) },
+      );
+      area.classList.toggle('combos-high', side === 'top');
+    }
     // Folded, it asks nothing of the board and the grid centres as it always did.
     area.classList.toggle('combos-over', bar.offsetHeight > 0);
-  }
-
-  /**
-   * The cells the table has to keep clear of: the one being played and both
-   * runs through it, which are the runs the table is talking about.
-   */
-  private playedBands(): DOMRect[] {
-    const selected = this.board.selection;
-    if (selected < 0) return [];
-    const wanted = new Set<number>([selected]);
-    for (const run of [this.game.acrossRun(selected), this.game.downRun(selected)]) {
-      if (run) for (const cell of run.cells) wanted.add(cell);
-    }
-    const bands: DOMRect[] = [];
-    for (const cell of wanted) {
-      const rect = this.board.rectFor(cell);
-      if (rect) bands.push(rect);
-    }
-    return bands;
   }
 
   /** Called once the play tree is in the document, so the selected cell can take focus. */

@@ -350,46 +350,64 @@ export function fillCandidates(game: Game): number[] {
 /** Which end of the board the table sits at, while it is over the board at all. */
 export type StripSide = 'bottom' | 'top';
 
-/** A band down the pane: a cell, one of the runs through it, or the table. */
+/** A band down the pane: a cell, or the table itself. */
 export interface Band {
   top: number;
   bottom: number;
 }
 
+/** Where the table and the cell being played are standing in the window. */
+export interface Seen {
+  view: Band;
+  cell: Band;
+  stripHeight: number;
+  /** How far off the edge of the pane the stylesheet holds the table. */
+  inset?: number;
+}
+
 /**
  * Which end of the board the table should sit at.
  *
- * `preferred` is where the player has parked it, and it stays parked. What
- * moves it is being in the way — and the way is not the selected cell alone,
- * it is every cell of the across and down runs through it. Those runs are the
- * whole reason a combination is or is not on the table, and one sitting over
- * half of a run hides the working that explains it; worse, the cells behind it
- * can be neither read nor tapped, which is what watching only the cell missed.
+ * By the row being played, counted on the grid: the bottom third of the board
+ * sends the table up, the top third sends it down, and the middle third
+ * leaves it wherever the player parked it. On a 16x16 that is the bottom six
+ * rows and the top six — the rows you are on when the table is in the way.
  *
- * Where both ends are in the way — a table too tall for the window to clear at
- * either end — it takes the one that covers fewer cells of the runs, and a tie
- * stays put rather than hopping for nothing. The bands come from the pane, not
- * from row numbers: a zoomed board scrolls, so the bottom row of the grid and
- * the bottom of the window are different places.
+ * It worked from the pixels for a while, moving whenever the across or down
+ * run through the cell overlapped the strip. That is the finer answer and an
+ * unpredictable one: a zoomed board scrolls, so the same row gave a different
+ * place depending on how far the board had been panned, and two cells on one
+ * row could send the table to opposite ends. It read as a table wandering
+ * about on its own. A rule that can be seen from the grid is worth more here
+ * than a rule that is exactly right.
+ *
+ * `seen` is the one place the pixels still get a say. A zoomed board scrolled
+ * down to its last rows leaves the row being played at the *top* of the
+ * window, which is where the thirds would send the table — so if the end the
+ * row asks for would stand on the selected cell, and the other end is clear,
+ * it goes to the other end. Nothing else overrules the row.
  */
 export function dodgeSide(
   preferred: StripSide,
-  view: Band,
-  run: Band[],
-  stripHeight: number,
-  inset = 8,
+  played: { row: number; rows: number },
+  seen?: Seen,
 ): StripSide {
-  if (stripHeight <= 0 || run.length === 0) return preferred;
-  const band = (side: StripSide): Band =>
-    side === 'bottom'
-      ? { top: view.bottom - inset - stripHeight, bottom: view.bottom - inset }
-      : { top: view.top + inset, bottom: view.top + inset + stripHeight };
-  const covered = (side: StripSide): number => {
-    const { top, bottom } = band(side);
-    return run.filter((cell) => cell.bottom > top && cell.top < bottom).length;
+  const third = Math.ceil(played.rows / 3);
+  let side = preferred;
+  if (played.row >= played.rows - third) side = 'top';
+  else if (played.row < third) side = 'bottom';
+
+  if (seen === undefined || seen.stripHeight <= 0) return side;
+  const where = seen;
+  const inset = where.inset ?? 8;
+  const standsOnTheCell = (at: StripSide): boolean => {
+    const band: Band =
+      at === 'bottom'
+        ? { top: where.view.bottom - inset - where.stripHeight, bottom: where.view.bottom - inset }
+        : { top: where.view.top + inset, bottom: where.view.top + inset + where.stripHeight };
+    return where.cell.bottom > band.top && where.cell.top < band.bottom;
   };
-  const here = covered(preferred);
-  if (here === 0) return preferred;
-  const other: StripSide = preferred === 'bottom' ? 'top' : 'bottom';
-  return covered(other) < here ? other : preferred;
+  if (!standsOnTheCell(side)) return side;
+  const other: StripSide = side === 'bottom' ? 'top' : 'bottom';
+  return standsOnTheCell(other) ? side : other;
 }

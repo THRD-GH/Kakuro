@@ -2058,6 +2058,21 @@ p {
   pointer-events: none;
 }
 
+/*
+ * The table and the hint go with the board. Everything they say is about this
+ * puzzle — the combinations still open in the run, the deduction waiting to be
+ * made — and neither was behind the blur: the strip sits over the grid rather
+ * than in it, and beside a wide board it is in the column entirely.
+ *
+ * Hidden rather than blurred, because blurred digits at this size still have
+ * the shape of their digits; and hidden rather than removed, so the board does
+ * not jump as it goes and come back somewhere else.
+ */
+.play.paused .combos-wrap,
+.play.paused .hint-note {
+  visibility: hidden;
+}
+
 .board-area.paused::after {
   content: 'Paused';
   position: absolute;

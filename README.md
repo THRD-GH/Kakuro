@@ -79,6 +79,17 @@ Hint and pause; along the bottom, undo, redo and a rub-out key for Clear. Four
 colours still say which group a key belongs to before you look at the drawing,
 and each tool's title says whether it wants holding.
 
+**Pause takes the puzzle off the screen**, not just the clock off the wall. A
+stopped clock with the board still readable is a way to study it for free, so
+the grid is blurred — and so are the two things beside it that are also about
+this puzzle, the combination table and any hint left on screen. Neither was
+covered by the blur: the table floats over the grid rather than sitting in it,
+and beside a wide board it is in the column entirely. They are hidden rather
+than blurred, since blurred digits still have the shape of digits, and hidden
+rather than removed, so the board does not jump as it goes. The keys stop with
+them: a digit, Clear or Undo would be playing blind, and Check or Hint would be
+answering a question about a board nobody can see.
+
 **Keypad side**, under Display, puts the digits on the right under a right
 thumb, with the tools across from them, as killer-sudoku offers it; left is
 where they have always been. Only the two blocks swap: 1 to 9 keeps its order

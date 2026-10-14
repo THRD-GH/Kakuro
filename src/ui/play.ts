@@ -405,13 +405,23 @@ export class PlayScreen {
      * Ignored in silence, a guarded key looked as if it was broken.
      */
     const guard = (button: HTMLButtonElement, needsHold: boolean, action: () => void): void => {
+      /*
+       * Nothing a guarded tool does belongs in a pause: Marks, Clear, Undo and
+       * Redo would be editing a board nobody can see, and Check and Hint would
+       * be answering questions about it — for the price of a stopped clock.
+       * The session tools are left alone, since zooming a blurred grid or
+       * folding a hidden table gives nothing away.
+       */
+      const play = (): void => {
+        if (!this.paused) action();
+      };
       if (!needsHold) {
-        bindTap(button, { onTap: action });
+        bindTap(button, { onTap: play });
         return;
       }
       const name = button.getAttribute('aria-label') ?? 'This key';
       bindTap(button, {
-        onHold: action,
+        onHold: play,
         // Undo and Redo are greyed out with nothing to take back, and a nudge
         // to hold a key that could do nothing anyway would only be noise.
         onTap: () => {
@@ -513,6 +523,13 @@ export class PlayScreen {
    * that keeps running while you answer the door makes the time meaningless,
    * and a board still on screen makes stopping the clock a way to study it for
    * free.
+   *
+   * The blur was only ever on the grid, though, and the grid is not the only
+   * thing on screen that talks about the puzzle: the table went on listing
+   * every combination left in the run, a hint went on naming the next
+   * deduction, and both read perfectly through a paused board. The class goes
+   * on the screen as well as the board area, since beside a wide board the
+   * table is in the column and not over the grid at all.
    */
   private setPaused(on: boolean): void {
     if (this.finished) return;
@@ -523,6 +540,7 @@ export class PlayScreen {
     this.pauseButton.append(on ? playIcon() : pauseIcon());
     this.pauseButton.setAttribute('aria-label', on ? 'Resume' : 'Pause');
     this.node.querySelector('.board-area')?.classList.toggle('paused', on);
+    this.node.classList.toggle('paused', on);
     if (on) this.game.pause();
     else this.game.start();
     this.tick();
@@ -567,6 +585,7 @@ export class PlayScreen {
 
   /** A plain tap: toggle the digit in the cell's set. */
   private tap(digit: number): void {
+    if (this.paused) return;
     const cell = this.target();
     if (cell < 0) return;
     this.game.tapDigit(cell, digit, this.app.settings.allowSingleMark);
@@ -575,6 +594,7 @@ export class PlayScreen {
 
   /** Hold, double-tap or Shift+digit: this is the answer, and say so. */
   private force(digit: number): void {
+    if (this.paused) return;
     const cell = this.target();
     if (cell < 0) return;
     this.game.forceDigit(cell, digit, this.app.settings.autoRemoveMarks);
@@ -631,6 +651,10 @@ export class PlayScreen {
 
   handleKey(e: KeyboardEvent): void {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    // Paused, every key here is either playing blind or asking the puzzle a
+    // question while the clock is stopped. The pause button is on screen and
+    // lit; this screen has no key of its own for it.
+    if (this.paused) return;
     const key = e.key;
 
     if (key >= '1' && key <= '9') {

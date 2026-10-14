@@ -435,8 +435,10 @@ async function askForUpdate(button: HTMLButtonElement): Promise<void> {
   button.textContent = label;
 
   if (found === 'updating') {
-    toast('A new version is coming down. The app will restart.');
-    whenUpdateLands(() => window.location.reload());
+    // It may be downloading or already in the cache with only the page behind;
+    // either way the player asked for the new one and is about to be on it.
+    toast('A new version is here. The app will restart.');
+    void whenUpdateLands(() => window.location.reload());
     return;
   }
   button.disabled = false;

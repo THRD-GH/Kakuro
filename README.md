@@ -17,7 +17,17 @@ The worker looks for a new build each time the app comes back to the
 foreground, installs it in the background and takes over the page; the code
 already running stays as it is until something reloads it, so the notice for
 that says the version is *ready*, not that it has loaded — it arrives at the
-next launch. Installed to a home
+next launch.
+
+That is also why the check compares *pages* rather than asking the worker.
+Asked "is there anything newer than what you have installed?", a worker that
+has already installed the new version in the background truthfully says no —
+and the player, still running the old page, is told they are on the latest
+when they are two builds behind. So the check reads the hashed asset names out
+of the page it is running and out of the copy the site is handing out, past
+both caches, and compares the two. Vite names every asset after a hash of its
+contents, so this needs no version number kept in step and notices a change
+that touched only the stylesheet. Installed to a home
 screen there is nothing to reload *with* — no address bar, no refresh — so
 Settings carries **This app**: the build you are running, and a button that
 asks the server now. A new one found there restarts the app once the new

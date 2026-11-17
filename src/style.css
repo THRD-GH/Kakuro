@@ -1236,6 +1236,13 @@ p {
   text-decoration: line-through;
 }
 
+/* A hold in progress, as the keys show one. Ruling a combination out is the
+   one thing on this strip that cannot be seen coming, and it used to happen
+   with nothing on screen having changed at all. */
+.combo.holding {
+  background: var(--sel);
+}
+
 /* ------------------------------------------------------------- the controls */
 
 /*

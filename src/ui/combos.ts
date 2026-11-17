@@ -3,6 +3,7 @@ import { combosFor, dealableCombos } from '../core/combos.ts';
 import type { Run } from '../core/types.ts';
 import type { Game } from '../game/state.ts';
 import { clear, el } from './dom.ts';
+import { bindTap } from './pointer.ts';
 
 /**
  * The combination bar: what can still go in the cell you are on.
@@ -162,59 +163,47 @@ export class CombosBar {
       }
 
       /*
-       * Tap pencils the combination in, hold rules it out.
+       * Tap pencils the combination in, hold rules it out — through `bindTap`,
+       * which is what the rest of the app presses its buttons with.
        *
-       * The hold marks the chip where it stands rather than repainting the
-       * strip, and that is the whole point of it. Repainting threw away every
+       * This used to watch for the press and the release itself, and watched
+       * for nothing in between. A touch pointer belongs to the element it
+       * landed on until it is lifted: it does not leave, whatever the finger
+       * does. So a finger that came down on a chip and then dragged — panning
+       * a zoomed board, which is most of what a finger does on a 20×20, and
+       * the strip floats over that board — left the hold timer running, and
+       * four hundred milliseconds later the chip was ruled out. Nothing had
+       * moved on screen to say why. A player found the only combination left
+       * in a run crossed out, with no way to know what had done it.
+       *
+       * `bindTap` drops the hold *and* the tap once the finger has drifted,
+       * and ignores a release on a chip that never saw the press — the chips
+       * sit a quarter of an inch apart, and sliding from one to another used
+       * to pencil in the one the finger happened to end on.
+       *
+       * What stays here is what the hold does: it marks the chip where it
+       * stands rather than repainting the strip. Repainting threw away every
        * chip in the row while the finger was still down, so the release
        * landed on a *freshly built* chip — a different object, with its own
-       * `held` still false — and pencilled that combination into the run.
-       * Holding a moment too long wrote the digits in and took the rest of
-       * the list with them, since the board had changed under it.
+       * press still unrecorded — and pencilled that combination into the run.
        *
        * `this.struck` is what a later repaint reads, so the mark survives one
        * even though nothing is rebuilt here.
        */
-      let held = false;
-      let pressed = false;
-      let timer: number | undefined;
-      chip.addEventListener('pointerdown', () => {
-        pressed = true;
-        held = false;
-        timer = window.setTimeout(() => {
-          held = true;
+      bindTap(chip, {
+        onTap: () => this.onPencil(run, mask),
+        onHold: () => {
           const key = run.clue * 4 + (run.dir === 'across' ? 0 : 1);
           const set = this.struck.get(key) ?? new Set<number>();
           if (set.has(mask)) set.delete(mask);
           else set.add(mask);
           this.struck.set(key, set);
           chip.classList.toggle('struck', set.has(mask));
-        }, 400);
-      });
-      const stop = (): void => {
-        window.clearTimeout(timer);
-        pressed = false;
-      };
-      chip.addEventListener('pointerleave', stop);
-      chip.addEventListener('pointercancel', stop);
-      /*
-       * Only the chip that was pressed acts on the release.
-       *
-       * A finger that lands on one chip and slides onto another before lifting
-       * sends the `pointerup` to the second — which had no `pointerdown` of
-       * its own, so it read the lift as a tap and pencilled in a combination
-       * nobody chose. The chips sit a quarter of an inch apart on a phone.
-       *
-       * This is what `bindTap` gets right for the rest of the app, where a
-       * release on a target that did not see the press is dropped unless the
-       * caller asked for drift to be forgiven — right for the grid, where a
-       * hurried tap that slides a pixel is still plainly a tap, and wrong
-       * here, where the two chips mean different things.
-       */
-      chip.addEventListener('pointerup', () => {
-        const mine = pressed;
-        stop();
-        if (!held && mine) this.onPencil(run, mask);
+        },
+        // A quick second tap is a second pencilling, not a rule-out: it writes
+        // the same digits again, where ruling out by accident takes the one
+        // combination that fits off the table.
+        doubleTap: false,
       });
       list.append(chip);
     }

@@ -4,8 +4,29 @@
     {
       "name": "kakuro",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 5173
+      "runtimeArgs": [
+        "--prefix",
+        "C:/Work/Repo/kakuro",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
+      "port": 5175
+    },
+    {
+      "name": "kakuro-built",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Work/Repo/toolkit/tk.mjs",
+        "serve",
+        "C:/Work/Repo/kakuro/dist",
+        "--port",
+        "4175"
+      ],
+      "port": 4175
     }
   ]
 }

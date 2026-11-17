@@ -82,6 +82,15 @@ though, which made a guarded button look broken: it brings up a toast saying
 the button needs a long press. When Check or Hint is guarded, `C` or `H`
 without `Shift` says what it needs in the same way.
 
+A chip on the combination strip is tapped to pencil it in and held to rule it
+out, and both go through the same `bindTap` as the keys. They did not at
+first, and the difference cost a player the one combination left in a run: a
+touch pointer belongs to the element it came down on until it is lifted, so a
+finger that landed on a chip and then dragged the board never left the chip,
+the hold ran out, and the chip was crossed out with nothing on screen moving
+to say so. `bindTap` drops the hold and the tap together once the finger has
+drifted, and a hold now tints the chip while it is counting, as the keys do.
+
 The block is two three-by-threes: the nine digits, and the nine tools beside
 them drawn rather than named. Along the top, a table for the combinations, a
 pencil for Marks and a tick for Check; through the middle, zoom, a bulb for

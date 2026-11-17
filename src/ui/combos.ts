@@ -27,8 +27,21 @@ export class CombosBar {
   private game: Game;
   private onPencil: (run: Run, mask: number) => void;
   private cell = -1;
-  /** Combinations ruled out by hand, per run, by digit mask. */
-  private struck = new Map<number, Set<number>>();
+  /**
+    * Combinations ruled out by hand, per run — and the state of the run they
+    * were ruled out against.
+    *
+    * A rule-out is a statement about the cells as they stand: *not* these
+    * digits, in these cells, given what is already written. Keep it past a
+    * change to the run and it becomes a statement about cells that no longer
+    * exist, and it comes back to haunt the player: one ruled out by accident
+    * on a 21 down crossed out `(345)` every time the run came back to that
+    * shape — through moving away and back, through scrolling, through rubbing
+    * the run out and writing it again — with nothing on screen to say why, and
+    * no way to reason it away. So the marks are kept against the digits in the
+    * run, and dropped the moment those change.
+    */
+  private struck = new Map<number, { placed: string; masks: Set<number> }>();
 
   constructor(game: Game, onPencil: (run: Run, mask: number) => void) {
     this.game = game;
@@ -56,6 +69,26 @@ export class CombosBar {
     for (const run of [this.game.acrossRun(cell), this.game.downRun(cell)]) {
       if (run) this.node.append(this.rowFor(run));
     }
+  }
+
+  /** The digits written into a run, which is what its rule-outs are about. */
+  private placedIn(run: Run): string {
+    return run.cells.map((cell) => this.game.values[cell]).join(',');
+  }
+
+  /**
+   * The combinations ruled out for this run as it stands now. Marks made
+   * against a different set of written digits are not about these cells, so
+   * they are dropped rather than carried forward.
+   */
+  private ruledOut(run: Run): Set<number> {
+    const key = run.clue * 4 + (run.dir === 'across' ? 0 : 1);
+    const placed = this.placedIn(run);
+    const kept = this.struck.get(key);
+    if (kept && kept.placed === placed) return kept.masks;
+    const fresh = { placed, masks: new Set<number>() };
+    this.struck.set(key, fresh);
+    return fresh.masks;
   }
 
   private rowFor(run: Run): HTMLElement {
@@ -100,11 +133,11 @@ export class CombosBar {
       return row;
     }
 
-    const struck = this.struck.get(run.clue * 4 + (run.dir === 'across' ? 0 : 1)) ?? new Set<number>();
+    const ruled = this.ruledOut(run);
     const list = el('div', { class: 'combos-options' });
     for (const mask of options) {
       const chip = el('button', {
-        class: `combo${struck.has(mask) ? ' struck' : ''}${mask & blocked ? ' unlikely' : ''}`,
+        class: `combo${ruled.has(mask) ? ' struck' : ''}${mask & blocked ? ' unlikely' : ''}`,
         type: 'button',
         title: 'Tap to pencil in · hold to rule out',
       });
@@ -193,12 +226,13 @@ export class CombosBar {
       bindTap(chip, {
         onTap: () => this.onPencil(run, mask),
         onHold: () => {
-          const key = run.clue * 4 + (run.dir === 'across' ? 0 : 1);
-          const set = this.struck.get(key) ?? new Set<number>();
-          if (set.has(mask)) set.delete(mask);
-          else set.add(mask);
-          this.struck.set(key, set);
-          chip.classList.toggle('struck', set.has(mask));
+          // Read again rather than closing over the set: a digit written into
+          // the run while the finger was down means these marks are a fresh
+          // page, and the one being held belongs on that page, not the old one.
+          const marks = this.ruledOut(run);
+          if (marks.has(mask)) marks.delete(mask);
+          else marks.add(mask);
+          chip.classList.toggle('struck', marks.has(mask));
         },
         // A quick second tap is a second pencilling, not a rule-out: it writes
         // the same digits again, where ruling out by accident takes the one

@@ -82,6 +82,15 @@ though, which made a guarded button look broken: it brings up a toast saying
 the button needs a long press. When Check or Hint is guarded, `C` or `H`
 without `Shift` says what it needs in the same way.
 
+A rule-out lives only as long as the run it was made about. It says *not these
+digits, in these cells, given what is already written* — so the marks are kept
+against the digits in the run and dropped the moment one of them changes.
+Carried forward, a rule-out made by accident is close to unkillable: one on a
+21 down crossed out its only combination every time the run came back to that
+shape, surviving a move away and back, a scroll, and even rubbing the run out
+and writing it again, with nothing on screen to say why. Pencilling does not
+count as a change, since pencil marks are the working, not the answer.
+
 A chip on the combination strip is tapped to pencil it in and held to rule it
 out, and both go through the same `bindTap` as the keys. They did not at
 first, and the difference cost a player the one combination left in a run: a

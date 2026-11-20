@@ -34,11 +34,20 @@ export const POOL_SIZES = [500, 1000, 2500, 5000] as const;
 
 export type Theme = 'night' | 'day' | 'contrast';
 
+/** The two dark themes: what the one-tap toggle on the bar swaps day for. */
+export type DarkTheme = Exclude<Theme, 'day'>;
+
 /** Which side of the controls the digits sit on, as killer-sudoku names it. */
 export type KeypadSide = 'left' | 'right';
 
 export interface Settings {
   theme: Theme;
+  /**
+   * Which dark theme the toggle on the bar comes back to, kept so that a
+   * player who chose High contrast is not quietly moved to Night by the first
+   * tap of it. Whichever dark theme was last in use, however it was chosen.
+   */
+  darkTheme: DarkTheme;
   /** Which side the digits sit on, with the tools across from them. */
   keypadSide: KeypadSide;
   /** The board last chosen on the menu, so it is still there next time. */
@@ -80,6 +89,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'day',
+  darkTheme: 'night',
   keypadSide: 'left',
   size: 12,
   poolSize: POOL_SIZE,
@@ -164,11 +174,23 @@ export function loadSettings(): Settings {
   // count to a million, or to nothing.
   if (!(POOL_SIZES as readonly number[]).includes(stored.poolSize)) stored.poolSize = DEFAULT_SETTINGS.poolSize;
   if (stored.keypadSide !== 'left' && stored.keypadSide !== 'right') stored.keypadSide = DEFAULT_SETTINGS.keypadSide;
+  // An edited store could otherwise leave the toggle on the bar offering a
+  // theme that does not exist, or offering day while day is already on.
+  if (stored.darkTheme !== 'night' && stored.darkTheme !== 'contrast') stored.darkTheme = DEFAULT_SETTINGS.darkTheme;
   return stored;
 }
 
 export function saveSettings(settings: Settings): void {
   write(KEY.settings, settings);
+}
+
+/**
+ * What the one-tap toggle does next: day from either dark theme, and back to
+ * the dark one last in use. Here rather than in the button, because it is a
+ * rule about the setting and worth a test of its own.
+ */
+export function nextTheme(settings: Pick<Settings, 'theme' | 'darkTheme'>): Theme {
+  return settings.theme === 'day' ? settings.darkTheme : 'day';
 }
 
 // ------------------------------------------------------------------- history

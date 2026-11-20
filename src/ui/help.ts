@@ -31,6 +31,7 @@ export function openHelp(): void {
       'Hold Marks to pencil in what is possible in every cell at once — the digits not already in one of its runs that could still make that run add up. Narrowing them down from there is the puzzle, so it stops at what the rules allow. Long-click Clear empties the cell.',
       'The tools beside the digits are drawn. Along the top: a table for the combinations, a pencil for Marks and a tick for Check. Through the middle: zoom, a bulb for Hint, and pause. Along the bottom: undo, redo and the rub-out key for Clear.',
       'Pause stops the clock and takes the puzzle off the screen with it — the board, the table and any hint on it — and the keys do nothing until you start again. A stopped clock is for answering the door, not for studying the grid.',
+      'The moon at the end of the bar swaps between day and night without leaving the puzzle. Settings has the third theme, high contrast, and the moon swaps against that one instead once it has been chosen.',
       'Keyboard: arrows move, 1–9 toggle, Shift and a digit, or a quick double press of it, forces, Delete or Backspace clears, M fills the marks, Z undoes, Y redoes, F puts on the fireworks. When Check or Hint is set to need a hold, the keyboard uses Shift with C or H — Clear and Marks are never guarded on a keyboard, where a key press is deliberate and either one undoes anyway.',
     ]),
     section('The table', [

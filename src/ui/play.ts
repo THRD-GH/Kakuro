@@ -28,6 +28,7 @@ import type { StripSide } from './combos.ts';
 import { clear, el, formatTime } from './dom.ts';
 import { DOUBLE_MS, bindPan, bindTap } from './pointer.ts';
 import { closeTopOverlay, confirmPanel, openOverlay, toast } from './overlay.ts';
+import { themeToggle } from './theme-toggle.ts';
 
 export class PlayScreen {
   readonly node: HTMLElement;
@@ -334,12 +335,21 @@ export class PlayScreen {
       text: `${stars} · ${puzzle.size}×${puzzle.size}`,
     });
 
+    /*
+     * The moon sits between the clock and the menu, so the two buttons that
+     * open nothing are together at the end of the bar and the ⋯ keeps the
+     * corner it has always had. It is the only control this bar has gained
+     * since it was drawn, and it is here because the light in the room changes
+     * mid-puzzle: through Settings that is four taps and a panel over the
+     * board, and the board is the thing you wanted to see in the new colours.
+     */
     return el(
       'header',
       { class: 'play-bar' },
       back,
       el('div', { class: 'play-id' }, el('b', { text: displayPuzzleId(id) }), this.claim),
       this.clock,
+      themeToggle(this.app),
       menu,
     );
   }

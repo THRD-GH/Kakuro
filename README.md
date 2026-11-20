@@ -395,6 +395,41 @@ ochre, the settled green and the red for a mistake were already the family's
 values — so only the ink changed: the clue squares are the navy of the text
 beside them.
 
+**Night opens that ladder out.** The three games took one night palette token
+for token, and in the dark it read flat for a reason that can be measured: an
+answer cell stood at 1.07:1 against the page behind it, so the sheet and the
+desk it lies on were the same tone and the board had no edge to it. Day never
+did that — there a cell is lighter than the stock around it, as paper on a
+table is. So the page sinks to `#0b1420` and the cells lift to `#1a2634`,
+1.21:1 between them, with a clue square 1.29:1 under a cell rather than
+1.15:1, and panels and keys falling between the page and the cells. The cream
+softens from `#f4efe5` to `#e8e4da` — 14.6:1 on the page where it was 15:1,
+past anything a guideline asks either way, and far less glare off a phone held
+in a dark room — and the red that says a digit is wrong lifts with the cells to
+4.85:1, clearing for the first time the 4.5:1 asked of small text. The page is
+no longer one flat slab: it is lit from the top, a shade above the flat navy at
+the crown and sinking below it at the foot, and its lightest point is still
+1.13:1 under a panel, so every step above holds at every height. A background
+picture is dimmed a quarter at night before the Dim slider goes over it, since
+the drawn patterns are day colours and a cream Washi behind a dark board is
+otherwise the brightest thing on the screen. killer-sudoku and Sudoku Variants
+still carry the older values, so this is the one place the three differ in the
+dark.
+
+**A moon on both bars.** The theme is the one display setting likely to be
+wanted in the middle of a game, because the light in the room changes while a
+puzzle is open, and it was four taps away behind a panel that covers the board
+while you choose. The menu's title bar carries the moon in front of Stats, Help
+and Settings; the play bar carries it between the clock and the `⋯`, so the two
+buttons that open nothing sit together at the end and the menu keeps the corner
+it has always had. The icon is the theme you will get rather than the one you
+are in: a moon in daylight, a sun in the dark. Three themes share the one
+button, so it swaps day against whichever *dark* theme is in use — a player who
+chose High contrast is given day and then High contrast back, rather than being
+moved to Night by a tap that said nothing about it. That choice is remembered
+in the settings, so it survives a restart, and the Theme row in Settings goes
+through the same call, which repaints the moon on the bar under the panel.
+
 **Backgrounds**, from the same six drawn patterns the other games offer —
 Seigaiha, Shippō, Tatami, Washi, Sumi and Obi, built as SVG at load so nothing
 is downloaded — or a photo of your own, shrunk to 1600px and kept on the

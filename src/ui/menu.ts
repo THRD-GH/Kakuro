@@ -6,6 +6,7 @@ import type { AppContext } from './app-context.ts';
 import { BELTS, belt } from './belt.ts';
 import { buildStamp, el } from './dom.ts';
 import { helpIcon, settingsIcon, statsIcon } from './icons.ts';
+import { themeToggle } from './theme-toggle.ts';
 import { openLevelInfo } from './level-info.ts';
 
 export function buildMenu(app: AppContext): HTMLElement {
@@ -13,6 +14,9 @@ export function buildMenu(app: AppContext): HTMLElement {
 
   // Stats, Help and Settings stay one tap away rather than going behind a ☰ as
   // they do in killer: with only three of them, a menu would only add a tap.
+  // The moon goes in front of them — the one thing in Settings worth reaching
+  // without opening Settings, since the light in the room changes while a game
+  // is open.
   const stats = el('button', { class: 'icon-button', type: 'button', 'aria-label': 'Stats', title: 'Stats' });
   stats.append(statsIcon());
   stats.addEventListener('click', () => app.goStats(1));
@@ -28,7 +32,7 @@ export function buildMenu(app: AppContext): HTMLElement {
       'header',
       { class: 'titlebar' },
       el('span', { class: 'id', text: 'Kakuro' }),
-      el('div', { class: 'titlebar-actions' }, stats, help, settings),
+      el('div', { class: 'titlebar-actions' }, themeToggle(app), stats, help, settings),
     ),
     /*
      * The kicker names the family, as the other DanDoku games do. Two choices

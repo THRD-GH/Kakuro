@@ -65,41 +65,75 @@
   --k-session-line: #c4503c59;
 }
 
-/* Night: the house navy, ink turned inside out — killer-sudoku's night
-   token for token, so the family is one family in the dark as well. */
+/*
+ * Night: the house navy, ink turned inside out — killer-sudoku's night, with
+ * the tonal ladder opened out.
+ *
+ * Taken token for token it read flat, and measurably so: an answer cell stood
+ * at 1.07:1 against the page behind it, so the sheet and the desk it lies on
+ * were the same tone and the board had no edge to it. Day never did that —
+ * there a cell is lighter than the stock around it, as paper on a table is. So
+ * the page sinks to #0b1420 and the cells lift to #1a2634, which puts 1.21:1
+ * between them, and a clue square now sits 1.29:1 under a cell rather than
+ * 1.15:1, so the shape of the grid reads before any digit does. Panels and
+ * keys fall between the page and the cells.
+ *
+ * The cream softens from #f4efe5 to #e8e4da: 14.6:1 on the page where it was
+ * 15:1 — past anything a guideline asks for either way, and a good deal less
+ * glare off a phone held in a dark room. The one red that says a digit is
+ * wrong lifts with the cells to 4.85:1 on them, the first time it clears the
+ * 4.5:1 that small text is asked for; it was 4.32:1.
+ *
+ * Everything the family shares stays where it was: the same navy and cream,
+ * the 2nd Kyū blue for anything picked out, ochre for the cursor, green for a
+ * settled cell. killer-sudoku and Sudoku Variants still carry the older
+ * values, so this is the one place the three differ in the dark.
+ */
 :root[data-theme='night'] {
-  --bg: #111c2b;
-  --panel: #17263a;
-  --panel-2: #1e2e44;
-  --line: #f4efe52e;
-  --rule: #f4efe538;
-  --line-strong: #f4efe5;
-  --cell: #152234;
-  --block: #0b1422;
-  --block-ink: #dfe6ee;
-  --text: #f4efe5;
-  --dim: #b9c4cf;
+  --bg: #0b1420;
+  /*
+   * The page itself, lit from the top: the flat navy for most of its height, a
+   * shade above it at the crown, sinking below it at the foot. Only `html` and
+   * `body` take it — `--bg` stays a flat colour, because the things that have
+   * to match the page need one: the mat a picture sits behind, the rules drawn
+   * through the gaps between cells, the PWA's own title bar.
+   *
+   * No point of it is ever as light as a panel or a cell, so every step above
+   * holds at every height: the lightest is #0d1724, which leaves 1.13:1 under
+   * a panel and 1.20:1 under a cell.
+   */
+  --page: linear-gradient(180deg, #0d1724 0%, #0b1420 40%, #070d14 100%);
+  --panel: #16212f;
+  --panel-2: #1d2a3b;
+  --line: #e8e4da33;
+  --rule: #e8e4da40;
+  --line-strong: #e8e4da;
+  --cell: #1a2634;
+  --block: #060b12;
+  --block-ink: #cfd8e2;
+  --text: #e8e4da;
+  --dim: #b0bbc7;
   --accent: #8fb4d6;
-  --accent-dim: #33465a;
-  --mark: #b9c4cf;
+  --accent-dim: #2a3c50;
+  --mark: #b0bbc7;
   --met: #7fbf8e;
-  --error: #e2564b;
+  --error: #e86a5e;
   --sel: rgba(214, 178, 94, 0.26);
   --peer: rgba(255, 255, 255, 0.05);
   --same: rgba(143, 180, 214, 0.15);
   --spot: rgba(214, 178, 94, 0.3);
-  --shadow: #00000073;
+  --shadow: #00000080;
   /* Inverted by night: cream with navy lettering. */
-  --primary-bg: #f4efe5;
-  --primary-text: #111c2b;
+  --primary-bg: #e8e4da;
+  --primary-text: #0b1420;
 
-  --k-face: #1e2e44;
-  --k-face-line: #f4efe559;
-  --k-edit: #17263a;
-  --k-edit-line: #f4efe533;
-  --k-aid: #1c2d42;
+  --k-face: #1d2a3b;
+  --k-face-line: #e8e4da59;
+  --k-edit: #16212f;
+  --k-edit-line: #e8e4da33;
+  --k-aid: #1b2a3c;
   --k-aid-line: #8fb4d655;
-  --k-session: #2a2432;
+  --k-session: #272231;
   --k-session-line: #f28b7655;
 }
 
@@ -152,7 +186,12 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background: var(--bg);
+  /*
+   * A theme may hand the page something other than a flat colour — night does,
+   * sinking a shade from the crown to the foot — and whatever it hands over,
+   * `--bg` is still the flat value everything that has to match the page uses.
+   */
+  background: var(--page, var(--bg));
   color: var(--text);
   font-family: var(--font-ui);
   -webkit-text-size-adjust: 100%;
@@ -2244,6 +2283,17 @@ body.has-bg::before {
   background: var(--bg-image) center / cover no-repeat;
 }
 
+/*
+ * The theme reaches the picture as well as the page. The six drawn patterns
+ * are day colours — Shippō and Washi are cream — so at night, behind a dark
+ * board, one of them is the brightest thing on the screen whatever the Dim
+ * slider is set to. Night takes a quarter off the picture before the dim goes
+ * over it, which leaves the slider doing exactly what it did.
+ */
+:root[data-theme='night'] body.has-bg::before {
+  filter: brightness(0.74) saturate(0.92);
+}
+
 /* The page colour over it, at the chosen dim. */
 body.has-bg::after {
   content: '';
@@ -2468,6 +2518,31 @@ body.has-bg .board {
   .sizes h2,
   .levels > h2 {
     display: none;
+  }
+}
+
+/*
+ * The narrowest phones, where the play bar has gained a button. Four controls
+ * and a clock leave the puzzle's code 84px on a 320px screen, and KAH5-1234 —
+ * a four-figure number on a 20x20, the longest code there is — wants 89px of
+ * it, so the one thing on the bar that says which puzzle this is was what
+ * went. The controls give up a few pixels each instead, which is enough for
+ * any code and for the stars under it; the label still yields before a
+ * control does, it just no longer has to.
+ */
+@media (max-width: 22.5rem) {
+  .play-bar {
+    gap: 0.35rem;
+  }
+
+  .play-bar .icon-button {
+    width: 2.1rem;
+    height: 2.1rem;
+  }
+
+  .clock {
+    min-width: 3.7rem;
+    padding: 0.35rem 0.3rem;
   }
 }
 

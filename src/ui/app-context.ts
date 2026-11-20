@@ -1,5 +1,5 @@
 import type { Level, PuzzleId, Size } from '../core/types.ts';
-import type { History, Settings } from '../game/storage.ts';
+import type { History, Settings, Theme } from '../game/storage.ts';
 
 /** What the screens are allowed to ask of the app shell. */
 export interface AppContext {
@@ -10,6 +10,8 @@ export interface AppContext {
   /** The board currently chosen on the menu. */
   size: Size;
   setSize(size: Size): void;
+  /** Change the theme, from a bar or from Settings, and remember the choice. */
+  setTheme(theme: Theme): void;
   applyTheme(): void;
   /** Put the digits on the chosen side, after the setting changes. */
   applyKeypadSide(): void;

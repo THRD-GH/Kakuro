@@ -25,11 +25,12 @@ import { previewFireworks } from './ui/celebration.ts';
 import { PlayScreen } from './ui/play.ts';
 import { openSettings } from './ui/settings.ts';
 import { buildStats } from './ui/stats.ts';
+import { paintThemeToggles } from './ui/theme-toggle.ts';
 import { applyBackground } from './ui/backgrounds.ts';
 
 /** The browser chrome colour that matches each board, for the PWA title bar. */
 const THEME_COLOUR: Record<Theme, string> = {
-  night: '#111c2b',
+  night: '#0b1420',
   day: '#f4efe5',
   contrast: '#000000',
 };
@@ -271,6 +272,20 @@ class App implements AppContext {
   }
 
   // ----------------------------------------------------------------- settings
+
+  /**
+   * The one way the theme changes, whether from the moon on the bar or the
+   * Theme row in Settings. So the dark theme the toggle returns to is
+   * remembered however it was chosen, and every toggle on screen is repainted
+   * even when what changed it was the panel sitting over them.
+   */
+  setTheme(theme: Theme): void {
+    this.settings.theme = theme;
+    if (theme !== 'day') this.settings.darkTheme = theme;
+    saveSettings(this.settings);
+    this.applyTheme();
+    paintThemeToggles(this.settings);
+  }
 
   applyTheme(): void {
     document.documentElement.dataset.theme = this.settings.theme;

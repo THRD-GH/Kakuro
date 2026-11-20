@@ -12,6 +12,7 @@ import {
   importBackup,
   loadHistory,
   loadSettings,
+  nextTheme,
   poolStats,
   putSave,
   recordFinish,
@@ -195,6 +196,26 @@ test('a keypad side that is not left or right falls back to left', () => {
   saveSettings({ ...DEFAULT_SETTINGS, keypadSide: 'right' });
   assert.equal(loadSettings().keypadSide, 'right');
   assert.equal(loadSettings().undoNeedsHold, false);
+});
+
+// The moon on the bar: one button, three themes.
+test('the toggle swaps day against the dark theme last in use', () => {
+  assert.equal(nextTheme({ theme: 'day', darkTheme: 'night' }), 'night');
+  assert.equal(nextTheme({ theme: 'night', darkTheme: 'night' }), 'day');
+  /*
+   * High contrast is a choice somebody made for a reason, and a tap that said
+   * nothing about it must not spend it: it gives day, and day gives it back.
+   */
+  assert.equal(nextTheme({ theme: 'contrast', darkTheme: 'contrast' }), 'day');
+  assert.equal(nextTheme({ theme: 'day', darkTheme: 'contrast' }), 'contrast');
+});
+
+test('a stored dark theme that is not a dark theme falls back to night', () => {
+  store.clear();
+  saveSettings({ ...DEFAULT_SETTINGS, darkTheme: 'day' as 'night' });
+  assert.equal(loadSettings().darkTheme, 'night');
+  saveSettings({ ...DEFAULT_SETTINGS, darkTheme: 'contrast' });
+  assert.equal(loadSettings().darkTheme, 'contrast');
 });
 
 // -------------------------------------------------------------------- stats

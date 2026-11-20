@@ -219,15 +219,11 @@ export function openSettings(app: AppContext): void {
    */
   const themeRow = stacked(
     'Theme',
-    'Day is warm stock and navy ink; Night the same board in navy; High contrast is pure black, colour-blind safe.',
+    'Day is warm stock and navy ink; Night the same board in navy, the page deeper than the board laid on it; High contrast is pure black, colour-blind safe. The moon on the bar swaps between day and whichever of the two dark ones you last chose here.',
     picker(
       THEMES,
       () => app.settings.theme,
-      (theme) => {
-        app.settings.theme = theme;
-        saveSettings(app.settings);
-        app.applyTheme();
-      },
+      (theme) => app.setTheme(theme),
     ),
   );
 

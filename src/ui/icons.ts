@@ -151,6 +151,30 @@ export const settingsIcon = (): SVGSVGElement =>
     ['circle', { ...line, 'stroke-width': '1.4', cx: '8', cy: '8', r: '2.1' }],
   );
 
+/**
+ * A crescent: the dark themes.
+ *
+ * Two discs of the same radius, one bitten out of the other, worked out rather
+ * than eyeballed — a disc at (8, 7.9) and the bite at (11.4, 4.5), both r=5.4,
+ * which draws between 2.6 and 13.1 across and 2.8 and 13.3 down: the box the
+ * chart and the cog beside it keep to.
+ */
+export const moonIcon = (): SVGSVGElement =>
+  icon(['path', { ...line, d: 'M6.28 2.78A5.4 5.4 0 1 0 13.12 9.62A5.4 5.4 0 0 1 6.28 2.78Z' }]);
+
+/** The sun: day. A disc and eight rays, each as short as the gap it stands off. */
+export const sunIcon = (): SVGSVGElement =>
+  icon(
+    ['circle', { ...line, cx: '8', cy: '8', r: '3.1' }],
+    [
+      'path',
+      {
+        ...line,
+        d: 'M8 1.4v1.5M8 13.1v1.5M1.4 8h1.5M13.1 8h1.5M3.35 3.35l1.05 1.05M11.6 11.6l1.05 1.05M12.65 3.35l-1.05 1.05M4.4 11.6l-1.05 1.05',
+      },
+    ],
+  );
+
 /** The zoom arrows turned inward: zoomed in, the next press comes back out. */
 export const unzoomIcon = (): SVGSVGElement =>
   icon(
